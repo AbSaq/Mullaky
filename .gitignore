@@ -1,4 +1,11 @@
-node_modules/
+# IDE
+.idea/
+
+# ENV
 .env
+
+# MISC
+.husky/
+node_modules/
 build/
 dist/
