@@ -1,44 +1,4 @@
 @import "tailwindcss";
 
-body {
-  background-color: #2e3849;
-  color: #ffffff;
-}
-
-@theme {
-  --color-brand: #3b82f6;
-}
-
-@layer components {
-  .login-page {
-    @apply flex min-h-screen flex-col items-center justify-center p-4 bg-black;
-  }
-
-  .login-card {
-    @apply w-full max-w-md rounded-xl bg-gray-900 p-10 shadow-2xl border border-gray-800;
-  }
-
-  .login-card__title {
-    @apply mb-8 text-center text-3xl font-bold tracking-tight text-gray-100;
-  }
-
-  .login-card__form {
-    @apply space-y-5;
-  }
-
-  .login-card__input {
-    @apply w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white shadow-sm focus: border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500 transition-all;
-  }
-
-  .login-card__input--last {
-    @apply mb-2;
-  }
-
-  .login-card__button {
-    @apply w-full rounded-lg bg-blue-600 py-3 px-4 text-white font-bold hover: bg-blue-500 transition-all shadow-lg shadow-blue-900/40 active:scale-[0.98];
-  }
-
-  .login-card__error {
-    @apply rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400;
-  }
-}
+/* Enable class-based dark mode (add .dark to <html>) */
+@variant dark (&:where(.dark, .dark *));
