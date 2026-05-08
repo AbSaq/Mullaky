@@ -5,5 +5,5 @@ export type Inputs = {
 
 export type User = {
   username: string;
-  user: string;
+  role: string;
 };

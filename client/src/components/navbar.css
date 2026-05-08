@@ -1,0 +1,48 @@
+/* index.css or main.css */
+@import "tailwindcss";
+
+/* Enable class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Navbar ───────────────────────────────────────────────────────────────── */
+.navbar {
+  @apply fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/90 backdrop-blur-md
+         border-b border-gray-100 dark:border-gray-800 shadow-sm;
+}
+.navbar-inner {
+  @apply max-w-7xl mx-auto px-6 flex items-center justify-between h-16;
+}
+.navbar-logo {
+  @apply flex items-center gap-2;
+}
+.navbar-logo-text {
+  @apply text-xl font-bold text-gray-900 dark:text-white;
+}
+.navbar-nav {
+  @apply hidden md:flex items-center gap-8;
+}
+.navbar-nav-link {
+  @apply text-sm text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors capitalize;
+}
+.navbar-actions {
+  @apply hidden md:flex items-center gap-3;
+}
+.navbar-login-link {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors px-4 py-2;
+}
+.navbar-cta {
+  @apply text-sm font-semibold bg-emerald-500 text-white px-5 py-2
+         rounded-lg hover:bg-emerald-600 transition-colors shadow-sm;
+}
+.navbar-hamburger {
+  @apply md:hidden p-2 text-gray-600 dark:text-gray-400;
+}
+.navbar-mobile-menu {
+  @apply md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex flex-col gap-4;
+}
+.navbar-mobile-link {
+  @apply text-sm text-gray-700 dark:text-gray-300;
+}
+.navbar-mobile-cta {
+  @apply text-sm font-semibold bg-emerald-500 text-white px-5 py-2 rounded-lg text-center;
+}

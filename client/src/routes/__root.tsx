@@ -37,9 +37,9 @@ function RootComponent() {
   return (
     <React.Fragment>
       <Outlet />
+      <DarkModeToggle />
       <TanStackRouterDevtools />
       <ReactQueryDevtools initialIsOpen={false} />
-      <DarkModeToggle />
     </React.Fragment>
   );
 }

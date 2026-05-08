@@ -10,83 +10,20 @@ import {
   Shield,
   Zap,
   Users,
-  Menu,
-  X,
 } from "lucide-react";
-import { useState } from "react";
 
 import "./index.css";
+import { Navbar } from "../components/Navbar";
+import type { User } from "../features/auth/types.ts";
+import { userQueryOptions } from "../features/auth/loginMutation.ts";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient.ensureQueryData(userQueryOptions);
+    return { user };
+  },
   component: LandingPage,
 });
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-
-function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  return (
-    <header className="navbar">
-      <div className="navbar-inner">
-        {/* Logo */}
-        <div className="navbar-logo">
-          <Building2 className="w-7 h-7 text-emerald-500" />
-          <span className="navbar-logo-text">Mullaky</span>
-        </div>
-
-        {/* Desktop nav */}
-        <nav className="navbar-nav">
-          {["#features", "#how-it-works", "#benefits"].map((href) => (
-            <a key={href} href={href} className="navbar-nav-link">
-              {href.replace("#", "").replace("-", " ")}
-            </a>
-          ))}
-        </nav>
-
-        {/* Desktop CTA */}
-        <div className="navbar-actions">
-          <a href="/login" className="navbar-login-link">
-            Login
-          </a>
-          <a href="/login" className="navbar-cta">
-            Get Started
-          </a>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="navbar-hamburger"
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="navbar-mobile-menu">
-          <a href="#features" className="navbar-mobile-link">
-            Features
-          </a>
-          <a href="#how-it-works" className="navbar-mobile-link">
-            How It Works
-          </a>
-          <a href="#benefits" className="navbar-mobile-link">
-            Benefits
-          </a>
-          <a href="/login" className="navbar-mobile-link">
-            Login
-          </a>
-          <a href="/login" className="navbar-mobile-cta">
-            Get Started
-          </a>
-        </div>
-      )}
-    </header>
-  );
-}
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -481,9 +418,10 @@ function SectionHeader({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function LandingPage() {
+  const { user } = Route.useRouteContext() as { user: User };
   return (
     <div className="landing-page">
-      <Navbar />
+      <Navbar variant="landing" user={user} />
       <main>
         <HeroSection />
         <FeaturesSection />
