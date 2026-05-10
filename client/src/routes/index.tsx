@@ -46,7 +46,7 @@ function Navbar() {
         {/* Desktop CTA */}
         <div className="navbar-actions">
           <a href="/login" className="navbar-login-link">Login</a>
-          <a href="/login" className="navbar-cta">Get Started</a>
+          <a href="/register" className="navbar-cta">Get Started</a>
         </div>
 
         {/* Mobile hamburger */}
@@ -66,7 +66,7 @@ function Navbar() {
           <a href="#how-it-works" className="navbar-mobile-link">How It Works</a>
           <a href="#benefits" className="navbar-mobile-link">Benefits</a>
           <a href="/login" className="navbar-mobile-link">Login</a>
-          <a href="/login" className="navbar-mobile-cta">Get Started</a>
+          <a href="/register" className="navbar-mobile-cta">Get Started</a>
         </div>
       )}
     </header>
@@ -103,7 +103,7 @@ function HeroSection() {
           </p>
 
           <div className="hero-cta-group">
-            <a href="/login" className="hero-cta-primary">
+            <a href="/register" className="hero-cta-primary">
               Get Started <ArrowRight className="w-4 h-4" />
             </a>
             <a href="/login" className="hero-cta-secondary">Login</a>

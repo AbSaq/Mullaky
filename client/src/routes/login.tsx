@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Building2,
@@ -9,6 +9,12 @@ import {
   ArrowRight,
   Shield,
 } from "lucide-react";
+import { auth, firestore } from "../firebase";
+import { 
+  signInWithEmailAndPassword,
+  signOut
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,29 +24,67 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); // 👈 added for error messages
+  const navigate = useNavigate();         // 👈 to redirect after login
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // auth logic goes here
-    setTimeout(() => setLoading(false), 1500);
+    setError("");
+
+try {
+  // 1. Sign in
+  const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+
+  // 2. Check if email is verified
+  if (!userCredential.user.emailVerified) {
+    await signOut(auth);
+    setError("Please verify your email before logging in. Check your inbox.");
+    return;
+  }
+
+  // 3. Update verified status in Firestore
+  await setDoc(doc(firestore, "users", userCredential.user.uid), {
+    verified: true
+  }, { merge: true });
+
+  // 4. Redirect to dashboard
+  navigate({ to: "/welcome" });
+
+} catch (err: any) {
+  switch (err.code) {
+    case "auth/user-not-found":
+      setError("No account found with this email.");
+      break;
+    case "auth/wrong-password":
+      setError("Incorrect password. Please try again.");
+      break;
+    case "auth/invalid-email":
+      setError("Please enter a valid email address.");
+      break;
+    case "auth/too-many-requests":
+      setError("Too many attempts. Please try again later.");
+      break;
+    default:
+      setError("Something went wrong. Please try again.");
+  }
+} finally {
+  setLoading(false);
+}
   };
 
   return (
     <div className="min-h-screen font-sans antialiased bg-gradient-to-br from-white via-emerald-50/40 to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex">
       {/* ── Left panel (decorative) ─────────────────────────────── */}
       <div className="hidden lg:flex flex-col justify-between w-[48%] bg-gradient-to-br from-emerald-500 to-green-700 p-12 relative overflow-hidden">
-        {/* Ambient circles */}
         <div className="absolute top-[-80px] left-[-80px] w-[400px] h-[400px] bg-white/10 rounded-full pointer-events-none" />
         <div className="absolute bottom-[-60px] right-[-60px] w-[350px] h-[350px] bg-white/10 rounded-full pointer-events-none" />
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <Building2 className="w-8 h-8 text-white" />
-          <span className="text-2xl font-bold text-white">Mulaky</span>
-        </div>
+        <Link to="/" className="flex items-center gap-3 relative z-10 text-white hover:opacity-90">
+          <Building2 className="w-8 h-8" />
+          <span className="text-2xl font-bold">Mulaky</span>
+        </Link>
 
-        {/* Centre copy */}
         <div className="relative z-10 space-y-8">
           <h2 className="text-4xl font-extrabold text-white leading-snug">
             Welcome back to<br />your community hub
@@ -50,7 +94,6 @@ function LoginPage() {
             running smoothly — all from one place.
           </p>
 
-          {/* Trust badges */}
           <div className="space-y-3">
             {[
               "End-to-end encrypted sessions",
@@ -67,7 +110,6 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom stat strip */}
         <div className="relative z-10 grid grid-cols-3 gap-4">
           {[
             { value: "500+", label: "Buildings" },
@@ -84,14 +126,12 @@ function LoginPage() {
 
       {/* ── Right panel (form) ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
-        {/* Mobile logo */}
-        <div className="flex lg:hidden items-center gap-2 mb-10">
+        <Link to="/" className="flex lg:hidden items-center gap-2 mb-10 text-gray-900 dark:text-white hover:opacity-90">
           <Building2 className="w-7 h-7 text-emerald-500" />
-          <span className="text-xl font-bold text-gray-900 dark:text-white">Mulaky</span>
-        </div>
+          <span className="text-xl font-bold">Mulaky</span>
+        </Link>
 
         <div className="w-full max-w-md space-y-8">
-          {/* Header */}
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Sign in</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -99,8 +139,15 @@ function LoginPage() {
             </p>
           </div>
 
-          {/* Form card */}
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl shadow-gray-100 dark:shadow-black/30 p-8 space-y-5">
+            
+            {/* 👇 Error message box */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div className="space-y-1.5">
@@ -172,11 +219,10 @@ function LoginPage() {
             </form>
           </div>
 
-          {/* Back to home */}
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             Don't have an account?{" "}
-            <Link to="/" className="text-emerald-600 font-semibold hover:underline">
-              Contact your admin
+            <Link to="/register" className="text-emerald-600 font-semibold hover:underline">
+              Register now
             </Link>
           </p>
         </div>

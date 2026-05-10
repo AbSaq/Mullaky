@@ -15,5 +15,8 @@
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx,css,md}": "prettier --write"
+  },
+  "dependencies": {
+    "firebase": "^12.13.0"
   }
 }
