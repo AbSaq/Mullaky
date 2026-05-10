@@ -1,22 +1,23 @@
 import { useState } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { useLogin } from "../../../features/auth/loginMutation";
-
-import type { Inputs } from "../../../features/auth/types";
-
+import { useNavigate, Link } from "@tanstack/react-router";
 import { Building2, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+
+import type { Inputs, LoginSearch } from "../../../types/auth.ts";
+import { useLogin } from "../../../features/auth/loginMutation";
+import { Route } from "./route.tsx";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit } = useForm<Inputs>();
+  const { redirect } = Route.useSearch() as LoginSearch;
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     await loginMutation.mutateAsync(data);
-    await navigate({ to: "/property" });
+    await navigate({ to: redirect || "/property" });
   };
 
   return (

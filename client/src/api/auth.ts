@@ -1,10 +1,6 @@
 import { api } from "./api";
 
-type User = {
-  username: string;
-  name: string;
-};
-type LoginResponse = { message: string; token: string; user: User };
+import type { LoginResponse, User } from "../types/auth.ts";
 
 export const authApi = {
   login: async (username: string, password: string): Promise<LoginResponse> => {
@@ -18,7 +14,6 @@ export const authApi = {
       return data;
     } catch (err: any) {
       console.error(err);
-      console.error("woo");
       const message =
         err.response?.data?.message || "Login failed. Please try again.";
       throw new Error(message);

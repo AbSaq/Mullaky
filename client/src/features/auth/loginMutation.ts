@@ -1,15 +1,9 @@
-import {
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { authApi } from "../../api/auth";
-import type { Inputs } from "./types.ts";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export const userQueryOptions = queryOptions({
-  queryKey: ["user"],
-  queryFn: authApi.getProfile,
-});
+import { authApi } from "../../api/auth";
+
+import { userQueryOptions } from "./useUser.ts";
+import type { Inputs } from "../../types/auth.ts";
 
 export function useLogin() {
   const queryClient = useQueryClient();

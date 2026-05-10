@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { userQueryOptions } from "../../features/auth/loginMutation.ts";
-import { Navbar } from "../../components/Navbar.tsx";
-import type { User } from "../../features/auth/types.ts";
+import { userQueryOptions } from "../../features/auth/useUser.ts";
+import { Navbar } from "../../components/Navbar/Navbar.tsx";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context }) => {
@@ -10,8 +9,7 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({
         to: "/login",
         search: {
-          // where they were trying to go for post-login redirect
-          redirect: location.href,
+          redirect: location.pathname + location.search + location.hash,
         },
       });
     }
@@ -22,16 +20,17 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function RouteComponent() {
-  const { user } = Route.useRouteContext() as { user: User };
+  const { user } = Route.useRouteContext();
 
   if (!user) {
     throw new Error("User not found in context");
   }
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar user={user} variant="authenticated" />
       <div className="h-16" />
-      <main className="app-main">
+      {/* Spacer for fixed navbar */}
+      <main className="pt-4">
         <Outlet />
       </main>
     </div>

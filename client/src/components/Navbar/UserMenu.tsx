@@ -1,5 +1,5 @@
-import { useLogout } from "../features/auth/logoutMutation";
-import type { User } from "../features/auth/types";
+import { useLogout } from "../../features/auth/logoutMutation.ts";
+import type { User } from "../../types/auth.ts";
 
 export const UserMenu = ({
   user,

@@ -1,5 +1,5 @@
 /* index.css or main.css */
-@import "tailwindcss";
+@import "../../../node_modules/tailwindcss";
 
 /* Enable class-based dark mode */
 @variant dark (&:where(.dark, .dark *));

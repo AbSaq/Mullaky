@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { userQueryOptions } from "./loginMutation";
+
+import { userQueryOptions } from "./useUser.ts";
 
 export function useLogout() {
   const queryClient = useQueryClient();

@@ -8,139 +8,139 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as AuthenticatedRouteRouteImport } from "./routes/_authenticated/route";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as AuthenticationLoginRouteRouteImport } from "./routes/_authentication/login/route";
-import { Route as AuthenticatedPropertyIndexRouteImport } from "./routes/_authenticated/property/index";
-import { Route as AuthenticatedPropertyPropertyIdRouteImport } from "./routes/_authenticated/property/$propertyId";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as HomeIndexRouteImport } from './routes/_home/index'
+import { Route as AuthenticationLoginRouteRouteImport } from './routes/_authentication/login/route'
+import { Route as AuthenticatedPropertyIndexRouteImport } from './routes/_authenticated/property/index'
+import { Route as AuthenticatedPropertyPropertyIdRouteImport } from './routes/_authenticated/property/$propertyId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: "/_authenticated",
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
-} as any);
-const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+} as any)
+const HomeIndexRoute = HomeIndexRouteImport.update({
+  id: '/_home/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticationLoginRouteRoute =
   AuthenticationLoginRouteRouteImport.update({
-    id: "/_authentication/login",
-    path: "/login",
+    id: '/_authentication/login',
+    path: '/login',
     getParentRoute: () => rootRouteImport,
-  } as any);
+  } as any)
 const AuthenticatedPropertyIndexRoute =
   AuthenticatedPropertyIndexRouteImport.update({
-    id: "/property/",
-    path: "/property/",
+    id: '/property/',
+    path: '/property/',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
+  } as any)
 const AuthenticatedPropertyPropertyIdRoute =
   AuthenticatedPropertyPropertyIdRouteImport.update({
-    id: "/property/$propertyId",
-    path: "/property/$propertyId",
+    id: '/property/$propertyId',
+    path: '/property/$propertyId',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
+  } as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/login": typeof AuthenticationLoginRouteRoute;
-  "/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/property/": typeof AuthenticatedPropertyIndexRoute;
+  '/': typeof HomeIndexRoute
+  '/login': typeof AuthenticationLoginRouteRoute
+  '/property/$propertyId': typeof AuthenticatedPropertyPropertyIdRoute
+  '/property/': typeof AuthenticatedPropertyIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/login": typeof AuthenticationLoginRouteRoute;
-  "/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/property": typeof AuthenticatedPropertyIndexRoute;
+  '/': typeof HomeIndexRoute
+  '/login': typeof AuthenticationLoginRouteRoute
+  '/property/$propertyId': typeof AuthenticatedPropertyPropertyIdRoute
+  '/property': typeof AuthenticatedPropertyIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/_authenticated": typeof AuthenticatedRouteRouteWithChildren;
-  "/_authentication/login": typeof AuthenticationLoginRouteRoute;
-  "/_authenticated/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/_authenticated/property/": typeof AuthenticatedPropertyIndexRoute;
+  __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authentication/login': typeof AuthenticationLoginRouteRoute
+  '/_home/': typeof HomeIndexRoute
+  '/_authenticated/property/$propertyId': typeof AuthenticatedPropertyPropertyIdRoute
+  '/_authenticated/property/': typeof AuthenticatedPropertyIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/login" | "/property/$propertyId" | "/property/";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/login" | "/property/$propertyId" | "/property";
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/login' | '/property/$propertyId' | '/property/'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/login' | '/property/$propertyId' | '/property'
   id:
-    | "__root__"
-    | "/"
-    | "/_authenticated"
-    | "/_authentication/login"
-    | "/_authenticated/property/$propertyId"
-    | "/_authenticated/property/";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/_authenticated'
+    | '/_authentication/login'
+    | '/_home/'
+    | '/_authenticated/property/$propertyId'
+    | '/_authenticated/property/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren;
-  AuthenticationLoginRouteRoute: typeof AuthenticationLoginRouteRoute;
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthenticationLoginRouteRoute: typeof AuthenticationLoginRouteRoute
+  HomeIndexRoute: typeof HomeIndexRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/_authenticated": {
-      id: "/_authenticated";
-      path: "";
-      fullPath: "/";
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authentication/login": {
-      id: "/_authentication/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof AuthenticationLoginRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated/property/": {
-      id: "/_authenticated/property/";
-      path: "/property";
-      fullPath: "/property/";
-      preLoaderRoute: typeof AuthenticatedPropertyIndexRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/property/$propertyId": {
-      id: "/_authenticated/property/$propertyId";
-      path: "/property/$propertyId";
-      fullPath: "/property/$propertyId";
-      preLoaderRoute: typeof AuthenticatedPropertyPropertyIdRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_home/': {
+      id: '/_home/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof HomeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authentication/login': {
+      id: '/_authentication/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthenticationLoginRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/property/': {
+      id: '/_authenticated/property/'
+      path: '/property'
+      fullPath: '/property/'
+      preLoaderRoute: typeof AuthenticatedPropertyIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/property/$propertyId': {
+      id: '/_authenticated/property/$propertyId'
+      path: '/property/$propertyId'
+      fullPath: '/property/$propertyId'
+      preLoaderRoute: typeof AuthenticatedPropertyPropertyIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedPropertyPropertyIdRoute: typeof AuthenticatedPropertyPropertyIdRoute;
-  AuthenticatedPropertyIndexRoute: typeof AuthenticatedPropertyIndexRoute;
+  AuthenticatedPropertyPropertyIdRoute: typeof AuthenticatedPropertyPropertyIdRoute
+  AuthenticatedPropertyIndexRoute: typeof AuthenticatedPropertyIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPropertyPropertyIdRoute: AuthenticatedPropertyPropertyIdRoute,
   AuthenticatedPropertyIndexRoute: AuthenticatedPropertyIndexRoute,
-};
+}
 
 const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren);
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthenticationLoginRouteRoute: AuthenticationLoginRouteRoute,
-};
+  HomeIndexRoute: HomeIndexRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

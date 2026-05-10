@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { Building2, Menu, X } from "lucide-react";
 import { useState } from "react";
-import { DesktopNavItem, MobileNavItem } from "./NavItems";
-import { UserMenu } from "./UserMenu";
-import type { User } from "../features/auth/types";
+import { DesktopNavItem, MobileNavItem } from "./NavItems.tsx";
+import { UserMenu } from "./UserMenu.tsx";
+import type { User } from "../../types/auth.ts";
 import "./navbar.css";
 
 interface SharedNavbarProps {
