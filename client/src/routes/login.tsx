@@ -14,7 +14,7 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -49,7 +49,16 @@ try {
   }, { merge: true });
 
   // 4. Redirect to dashboard
-  navigate({ to: "/welcome" });
+  // Get user role from Firestore
+const docSnap = await getDoc(doc(firestore, "users", userCredential.user.uid));
+if (docSnap.exists()) {
+  const role = docSnap.data().role;
+  if (role === "admin") {
+    navigate({ to: "/admin/dashboard" }); // 👈 admin goes here
+  } else {
+    navigate({ to: "/welcome" }); // 👈 user goes here
+  }
+}
 
 } catch (err: any) {
   switch (err.code) {
