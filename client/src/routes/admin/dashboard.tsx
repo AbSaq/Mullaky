@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { auth, firestore } from "../../firebase";
 import { signOut } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, getDoc, query, where, serverTimestamp, deleteDoc, deleteField } from "firebase/firestore";
 import { useAuth } from "../../hooks/useAuth";
 
 export const Route = createFileRoute("/admin/dashboard")({
@@ -57,7 +57,7 @@ function AdminDashboard() {
       if (!user) {
         navigate({ to: "/login" });
       } else if (role && role !== "admin") {
-        navigate({ to: "/welcome" });
+        navigate({ to: "/select-building" });
       }
     }
   }, [user, role, loading]);
@@ -258,6 +258,7 @@ function UsersSection() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -292,6 +293,12 @@ function UsersSection() {
     user: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
   };
 
+  const filtered = users.filter(
+    (u) =>
+      u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -307,6 +314,18 @@ function UsersSection() {
         </div>
       </div>
 
+      {/* Search bar */}
+      <div className="relative">
+        <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+      </div>
+
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
         <table className="w-full">
           <thead>
@@ -319,7 +338,12 @@ function UsersSection() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-            {users.map((u) => (
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={5} className="text-center py-10 text-gray-400 text-sm">No users found.</td>
+              </tr>
+            )}
+            {filtered.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -362,19 +386,29 @@ function UsersSection() {
 // ── Buildings Section ─────────────────────────────────────
 function BuildingsSection() {
   const [buildings, setBuildings] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({ name: "", address: "", floors: "", units: "" });
   const [saving, setSaving] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [selectedOwners, setSelectedOwners] = useState<Record<string, string>>({}); // 👈 added
 
   useEffect(() => {
-    fetchBuildings();
+    fetchData();
   }, []);
 
-  const fetchBuildings = async () => {
+  const fetchData = async () => {
     try {
-      const snap = await getDocs(collection(firestore, "buildings"));
-      setBuildings(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const buildSnap = await getDocs(collection(firestore, "buildings"));
+      const userSnap = await getDocs(collection(firestore, "users"));
+      setBuildings(buildSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setUsers(
+        userSnap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as any) }))
+          .filter((u) => u.role === "owner")
+      );
     } catch (err) {
       console.log("Error:", err);
     } finally {
@@ -404,6 +438,124 @@ function BuildingsSection() {
     }
   };
 
+  const assignOwner = async (buildingId: string, ownerId: string) => {
+    setAssigningId(buildingId);
+    try {
+      const buildingSnap = await getDoc(doc(firestore, "buildings", buildingId));
+      const buildingData = buildingSnap.data();
+
+      // Delete old owner membership if exists
+      const oldMemberships = await getDocs(
+        query(
+          collection(firestore, "memberships"),
+          where("buildingId", "==", buildingId),
+          where("role", "==", "owner")
+        )
+      );
+      for (const oldMem of oldMemberships.docs) {
+        await deleteDoc(doc(firestore, "memberships", oldMem.id));
+      }
+
+      // Update building with new owner
+      await updateDoc(doc(firestore, "buildings", buildingId), { ownerId });
+      await updateDoc(doc(firestore, "users", ownerId), { buildingId, role: "owner" });
+
+      // Create new membership
+      await addDoc(collection(firestore, "memberships"), {
+        userId: ownerId,
+        buildingId,
+        buildingName: buildingData?.name || "",
+        buildingAddress: buildingData?.address || "",
+        role: "owner",
+        createdAt: serverTimestamp(),
+      });
+
+      setBuildings((prev) =>
+        prev.map((b) => (b.id === buildingId ? { ...b, ownerId } : b))
+      );
+
+      // Clear selected owner after saving
+      setSelectedOwners((prev) => {
+        const updated = { ...prev };
+        delete updated[buildingId];
+        return updated;
+      });
+
+    } catch (err) {
+      console.log("Error assigning owner:", err);
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+const removeBuilding = async (buildingId: string) => {
+    if (!confirm("Are you sure you want to delete this building?")) return;
+    try {
+      // Delete building
+      await deleteDoc(doc(firestore, "buildings", buildingId));
+
+      // Delete all memberships for this building
+      const membershipsSnap = await getDocs(
+        query(collection(firestore, "memberships"), where("buildingId", "==", buildingId))
+      );
+      for (const mem of membershipsSnap.docs) {
+        await deleteDoc(doc(firestore, "memberships", mem.id));
+      }
+
+      // Delete all invitations for this building
+      const invitationsSnap = await getDocs(
+        query(collection(firestore, "invitations"), where("buildingId", "==", buildingId))
+      );
+      for (const inv of invitationsSnap.docs) {
+        await deleteDoc(doc(firestore, "invitations", inv.id));
+      }
+
+      setBuildings((prev) => prev.filter((b) => b.id !== buildingId));
+    } catch (err) {
+      console.log("Error removing building:", err);
+    }
+  };
+
+const removeOwner = async (buildingId: string, ownerId: string) => {
+    if (!confirm("Are you sure you want to remove this owner?")) return;
+    try {
+      // Remove ownerId from building using deleteField
+      await updateDoc(doc(firestore, "buildings", buildingId), { 
+        ownerId: deleteField() // 👈 properly removes the field
+      });
+
+      // Remove buildingId from user
+      await updateDoc(doc(firestore, "users", ownerId), {
+        buildingId: deleteField() // 👈 properly removes the field
+      });
+
+      // Delete owner membership
+      const membershipsSnap = await getDocs(
+        query(
+          collection(firestore, "memberships"),
+          where("buildingId", "==", buildingId),
+          where("role", "==", "owner")
+        )
+      );
+      for (const mem of membershipsSnap.docs) {
+        await deleteDoc(doc(firestore, "memberships", mem.id));
+      }
+
+      // Update buildings state
+      setBuildings((prev) =>
+        prev.map((b) => (b.id === buildingId ? { ...b, ownerId: null } : b))
+      );
+    } catch (err) {
+      console.log("Error removing owner:", err);
+    }
+  };
+
+  const filtered = buildings.filter(
+    (b) =>
+      b.name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.address?.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -425,6 +577,19 @@ function BuildingsSection() {
         </button>
       </div>
 
+      {/* Search bar */}
+      <div className="relative">
+        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search by name or address..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+      </div>
+
+      {/* Add building form */}
       {showForm && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white">New Building</h3>
@@ -474,7 +639,7 @@ function BuildingsSection() {
             <button
               onClick={addBuilding}
               disabled={saving}
-              className="flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
+              className="bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save Building"}
             </button>
@@ -488,17 +653,26 @@ function BuildingsSection() {
         </div>
       )}
 
+      {/* Buildings grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {buildings.map((b) => (
+        {filtered.map((b) => (
           <div key={b.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
-              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-emerald-500" />
-              </div>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                {b.ownerId ? "Has Owner" : "No Owner"}
-              </span>
-            </div>
+  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+    <Building2 className="w-6 h-6 text-emerald-500" />
+  </div>
+  <div className="flex items-center gap-2">
+    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
+      {b.ownerId ? "Has Owner" : "No Owner"}
+    </span>
+    <button
+      onClick={() => removeBuilding(b.id)}
+      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  </div>
+</div>
             <div>
               <h3 className="font-bold text-gray-900 dark:text-white">{b.name}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{b.address}</p>
@@ -513,11 +687,52 @@ function BuildingsSection() {
                 <p className="text-xs text-gray-500">Units</p>
               </div>
             </div>
+
+{/* Assign owner */}
+<div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+  <div className="flex items-center justify-between">
+    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Assign Owner</p>
+    {b.ownerId && (
+      <button
+        onClick={() => removeOwner(b.id, b.ownerId)}
+        className="text-xs text-red-500 hover:underline font-medium"
+      >
+        Remove Owner
+      </button>
+    )}
+  </div>
+  {users.length === 0 ? (
+    <p className="text-xs text-orange-500">No owners available. Change a user role to Owner first.</p>
+  ) : (
+    <div className="space-y-2">
+      <select
+        value={selectedOwners[b.id] || b.ownerId || ""}
+        onChange={(e) => setSelectedOwners((prev) => ({ ...prev, [b.id]: e.target.value }))}
+        className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+      >
+        <option value="">Select owner...</option>
+        {users.map((u) => (
+          <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
+        ))}
+      </select>
+      <button
+        onClick={() => {
+          const ownerId = selectedOwners[b.id];
+          if (ownerId) assignOwner(b.id, ownerId);
+        }}
+        disabled={assigningId === b.id || !selectedOwners[b.id]}
+        className="w-full py-2 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition disabled:opacity-50"
+      >
+        {assigningId === b.id ? "Saving..." : "Save Owner ✓"}
+      </button>
+    </div>
+  )}
+</div>
           </div>
         ))}
-        {buildings.length === 0 && (
+        {filtered.length === 0 && (
           <div className="col-span-3 text-center py-16 text-gray-400">
-            No buildings yet. Click "Add Building" to get started!
+            {search ? "No buildings match your search." : "No buildings yet. Click \"Add Building\" to get started!"}
           </div>
         )}
       </div>

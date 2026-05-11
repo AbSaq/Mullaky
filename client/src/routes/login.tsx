@@ -14,7 +14,7 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc, setDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -34,7 +34,11 @@ function LoginPage() {
 
 try {
   // 1. Sign in
-  const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+
+// 👇 Clear old session data
+sessionStorage.removeItem("selectedBuilding");
+  
 
   // 2. Check if email is verified
   if (!userCredential.user.emailVerified) {
@@ -49,15 +53,29 @@ try {
   }, { merge: true });
 
   // 4. Redirect to dashboard
-  // Get user role from Firestore
+// Get user role from Firestore
 const docSnap = await getDoc(doc(firestore, "users", userCredential.user.uid));
 if (docSnap.exists()) {
   const role = docSnap.data().role;
-  if (role === "admin") {
-    navigate({ to: "/admin/dashboard" }); // 👈 admin goes here
+if (role === "admin") {
+  navigate({ to: "/admin/dashboard" });
+} else {
+  // Check if user has any memberships
+  const membershipsSnap = await getDocs(
+    query(collection(firestore, "memberships"), where("userId", "==", userCredential.user.uid))
+  );
+  if (membershipsSnap.empty) {
+    // No buildings — owners go to select-building, users go to user dashboard
+    if (role === "owner") {
+      navigate({ to: "/select-building" });
+    } else {
+      navigate({ to: "/user/dashboard" });
+    }
   } else {
-    navigate({ to: "/welcome" }); // 👈 user goes here
+    // Has buildings — go to building selector
+    navigate({ to: "/select-building" });
   }
+}
 }
 
 } catch (err: any) {
