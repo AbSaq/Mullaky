@@ -12,8 +12,10 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   ChevronRight,
+  Search,
+  Crown,
+  Wrench,
 } from "lucide-react";
 import { auth, firestore } from "../../firebase";
 import { signOut } from "firebase/auth";
@@ -30,8 +32,8 @@ function AdminDashboard() {
   const [stats, setStats] = useState({
     buildings: 0,
     users: 0,
-    alerts: 0,
-    finances: 0,
+    owners: 0,
+    unassigned: 0,
   });
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
@@ -40,12 +42,13 @@ function AdminDashboard() {
     try {
       const usersSnap = await getDocs(collection(firestore, "users"));
       const buildingsSnap = await getDocs(collection(firestore, "buildings"));
-      const alertsSnap = await getDocs(collection(firestore, "alerts"));
+      const users = usersSnap.docs.map((d) => d.data());
+      const buildings = buildingsSnap.docs.map((d) => d.data());
       setStats({
         buildings: buildingsSnap.size,
         users: usersSnap.size,
-        alerts: alertsSnap.size,
-        finances: 0,
+        owners: users.filter((u) => u.role === "owner").length,
+        unassigned: buildings.filter((b) => !b.ownerId).length,
       });
     } catch (err) {
       console.log("Error fetching stats:", err);
@@ -54,17 +57,12 @@ function AdminDashboard() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        navigate({ to: "/login" });
-      } else if (role && role !== "admin") {
-        navigate({ to: "/select-building" });
-      }
+      if (!user) navigate({ to: "/login" });
+      else if (role && role !== "admin") navigate({ to: "/select-building" });
     }
   }, [user, role, loading]);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  useEffect(() => { fetchStats(); }, []);
 
   if (loading || !role) {
     return (
@@ -84,25 +82,14 @@ function AdminDashboard() {
 
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "buildings", label: "Buildings", icon: Building2 },
+    { id: "buildingdetails", label: "Buildings", icon: Building2 },
     { id: "users", label: "Users", icon: Users },
-    { id: "finances", label: "Finances", icon: DollarSign },
-    { id: "alerts", label: "Alerts", icon: Bell },
+    { id: "assignowners", label: "Assign Owners", icon: Crown },
   ];
 
   const statCards = [
-    { label: "Total Buildings", value: stats.buildings, icon: Building2, color: "emerald", change: "+2 this month" },
-    { label: "Total Users", value: stats.users, icon: Users, color: "blue", change: "+12 this month" },
-    { label: "Active Alerts", value: stats.alerts, icon: AlertTriangle, color: "orange", change: "3 urgent" },
-    { label: "Monthly Revenue", value: "SAR 0", icon: DollarSign, color: "purple", change: "+8% vs last month" },
-  ];
-
-  const recentActivity = [
-    { icon: CheckCircle2, color: "text-emerald-500", text: "Issue resolved: Elevator Floor 3", time: "2 min ago" },
-    { icon: AlertTriangle, color: "text-orange-500", text: "New alert: Water leak Apt 14B", time: "15 min ago" },
-    { icon: Users, color: "text-blue-500", text: "New user registered: Sara Ahmed", time: "1 hr ago" },
-    { icon: DollarSign, color: "text-purple-500", text: "Finance report updated: May 2026", time: "3 hr ago" },
-    { icon: Building2, color: "text-emerald-500", text: "New building added: Al Noor Tower", time: "1 day ago" },
+    { label: "Total Buildings", value: stats.buildings, icon: Building2, color: "emerald" },
+    { label: "Total Users", value: stats.users, icon: Users, color: "blue" },
   ];
 
   return (
@@ -164,15 +151,13 @@ function AdminDashboard() {
       <main className="flex-1 overflow-auto">
         <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-8 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white capitalize">{activeTab}</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white capitalize">{activeTab === "buildingdetails" ? "Buildings" : activeTab === "assignowners" ? "Assign Owners" : activeTab}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Welcome back, Admin</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-              <Bell className="w-5 h-5 text-gray-500" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
-          </div>
+          <button className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+            <Bell className="w-5 h-5 text-gray-500" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+          </button>
         </div>
 
         <div className="p-8">
@@ -180,75 +165,591 @@ function AdminDashboard() {
           {/* ── Overview ── */}
           {activeTab === "overview" && (
             <div className="space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                {statCards.map(({ label, value, icon: Icon, color, change }) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {statCards.map(({ label, value, icon: Icon, color }) => (
                   <div key={label} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        color === "emerald" ? "bg-emerald-100 dark:bg-emerald-900/30" :
-                        color === "blue" ? "bg-blue-100 dark:bg-blue-900/30" :
-                        color === "orange" ? "bg-orange-100 dark:bg-orange-900/30" :
-                        "bg-purple-100 dark:bg-purple-900/30"
+                        color === "emerald" ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-blue-100 dark:bg-blue-900/30"
                       }`}>
-                        <Icon className={`w-6 h-6 ${
-                          color === "emerald" ? "text-emerald-500" :
-                          color === "blue" ? "text-blue-500" :
-                          color === "orange" ? "text-orange-500" :
-                          "text-purple-500"
-                        }`} />
+                        <Icon className={`w-6 h-6 ${color === "emerald" ? "text-emerald-500" : "text-blue-500"}`} />
                       </div>
                       <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
                     <p className="text-3xl font-extrabold text-gray-900 dark:text-white">{value}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium">{change}</p>
                   </div>
                 ))}
               </div>
-
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">Recent Activity</h2>
-                  <span className="text-xs text-emerald-600 font-medium cursor-pointer hover:underline">View all</span>
-                </div>
-                <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                  {recentActivity.map(({ icon: Icon, color, text, time }, i) => (
-                    <div key={i} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                      <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                        <Icon className={`w-4 h-4 ${color}`} />
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">{text}</p>
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
-                        <Clock className="w-3 h-3" />
-                        {time}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <AdminBuildingsOverview />
             </div>
           )}
+
+          {/* ── Buildings Details tab ── */}
+          {activeTab === "buildingdetails" && <BuildingDetailsSection />}
 
           {/* ── Users tab ── */}
           {activeTab === "users" && <UsersSection />}
 
-          {/* ── Buildings tab ── */}
-          {activeTab === "buildings" && <BuildingsSection />}
+          {/* ── Assign Owners tab ── */}
+          {activeTab === "assignowners" && <AssignOwnersSection />}
 
-          {/* ── Other tabs coming soon ── */}
-          {activeTab !== "overview" && activeTab !== "users" && activeTab !== "buildings" && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto">
-                  <Building2 className="w-8 h-8 text-emerald-500" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">{activeTab}</h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Coming soon!</p>
-              </div>
-            </div>
-          )}
         </div>
       </main>
+    </div>
+  );
+}
+
+// ── Admin Buildings Overview ──────────────────────────────
+function AdminBuildingsOverview() {
+  const [buildings, setBuildings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
+    try {
+      const buildingsSnap = await getDocs(collection(firestore, "buildings"));
+      const buildingsList = await Promise.all(
+        buildingsSnap.docs.map(async (d) => {
+          const building = { id: d.id, ...d.data() } as any;
+          if (building.ownerId) {
+            const ownerSnap = await getDoc(doc(firestore, "users", building.ownerId));
+            if (ownerSnap.exists()) building.owner = ownerSnap.data();
+          }
+          const membershipsSnap = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", building.id)));
+          building.residentsCount = membershipsSnap.size;
+          const alertsSnap = await getDocs(query(collection(firestore, "alerts"), where("buildingId", "==", building.id)));
+          building.alertsCount = alertsSnap.size;
+          const maintenanceSnap = await getDocs(query(collection(firestore, "maintenance"), where("buildingId", "==", building.id)));
+          building.maintenanceCount = maintenanceSnap.docs.filter((d) => d.data().status === "pending" || d.data().status === "in-progress").length;
+          return building;
+        })
+      );
+      setBuildings(buildingsList);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-32">
+      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-bold text-gray-900 dark:text-white text-lg">Buildings Overview</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {buildings.map((b) => (
+          <div key={b.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
+                {b.ownerId ? "Has Owner" : "No Owner"}
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white">{b.name}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{b.address}</p>
+            </div>
+            {b.owner && (
+              <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2.5">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {b.owner.fullName?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">{b.owner.fullName}</p>
+                  <p className="text-xs text-gray-400">{b.owner.email}</p>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-2 text-center">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{b.residentsCount}</p>
+                <p className="text-xs text-gray-400">Residents</p>
+              </div>
+              <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-2 text-center">
+                <p className="text-sm font-bold text-orange-600">{b.alertsCount}</p>
+                <p className="text-xs text-gray-400">Alerts</p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2 text-center">
+                <p className="text-sm font-bold text-blue-600">{b.maintenanceCount}</p>
+                <p className="text-xs text-gray-400">Maintenance</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Building Details Section ──────────────────────────────
+function BuildingDetailsSection() {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", address: "", floors: "", units: "" });
+  const [addingSaving, setAddingSaving] = useState(false);
+  const [buildings, setBuildings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
+  const [buildingResidents, setBuildingResidents] = useState<any[]>([]);
+  const [buildingAlerts, setBuildingAlerts] = useState<any[]>([]);
+  const [buildingMaintenance, setBuildingMaintenance] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", address: "", floors: "", units: "" });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchBuildings(); }, []);
+
+const addBuilding = async () => {
+    if (!addForm.name || !addForm.address) return;
+    setAddingSaving(true);
+    try {
+      const docRef = await addDoc(collection(firestore, "buildings"), {
+        name: addForm.name,
+        address: addForm.address,
+        floors: Number(addForm.floors) || 0,
+        units: Number(addForm.units) || 0,
+        ownerId: null,
+        createdAt: serverTimestamp(),
+      });
+      setBuildings((prev) => [...prev, {
+        id: docRef.id,
+        ...addForm,
+        floors: Number(addForm.floors) || 0,
+        units: Number(addForm.units) || 0,
+        ownerId: null,
+        residentsCount: 0,
+      }]);
+      setAddForm({ name: "", address: "", floors: "", units: "" });
+      setShowAddForm(false);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setAddingSaving(false);
+    }
+  };
+
+  const fetchBuildings = async () => {
+    try {
+      const snap = await getDocs(collection(firestore, "buildings"));
+      const list = await Promise.all(snap.docs.map(async (d) => {
+        const b = { id: d.id, ...d.data() } as any;
+        if (b.ownerId) {
+          const ownerSnap = await getDoc(doc(firestore, "users", b.ownerId));
+          if (ownerSnap.exists()) b.owner = ownerSnap.data();
+        }
+        const membSnap = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", b.id)));
+        b.residentsCount = membSnap.size;
+        return b;
+      }));
+      setBuildings(list);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBuildingDetails = async (buildingId: string) => {
+    setLoadingDetails(true);
+    try {
+      // Get residents
+      const membSnap = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", buildingId)));
+      const residents = await Promise.all(membSnap.docs.map(async (d) => {
+        const userSnap = await getDoc(doc(firestore, "users", d.data().userId));
+        return { id: d.id, ...d.data(), ...userSnap.data() };
+      }));
+      setBuildingResidents(residents);
+
+      // Get alerts
+      const alertsSnap = await getDocs(query(collection(firestore, "alerts"), where("buildingId", "==", buildingId)));
+      const alerts = alertsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      alerts.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setBuildingAlerts(alerts);
+
+      // Get maintenance
+      const mainSnap = await getDocs(query(collection(firestore, "maintenance"), where("buildingId", "==", buildingId)));
+      const maintenance = mainSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      maintenance.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setBuildingMaintenance(maintenance);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const selectBuilding = (b: any) => {
+    setSelectedBuilding(b);
+    setEditForm({ name: b.name, address: b.address, floors: b.floors || "", units: b.units || "" });
+    fetchBuildingDetails(b.id);
+  };
+
+  const saveEdit = async () => {
+    if (!selectedBuilding) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(firestore, "buildings", selectedBuilding.id), {
+        name: editForm.name,
+        address: editForm.address,
+        floors: Number(editForm.floors) || 0,
+        units: Number(editForm.units) || 0,
+      });
+      setBuildings((prev) => prev.map((b) => b.id === selectedBuilding.id ? { ...b, ...editForm } : b));
+      setSelectedBuilding((prev: any) => ({ ...prev, ...editForm }));
+      setShowEditForm(false);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeResident = async (membershipId: string, userId: string) => {
+    if (!confirm("Remove this resident from the building?")) return;
+    try {
+      await deleteDoc(doc(firestore, "memberships", membershipId));
+      setBuildingResidents((prev) => prev.filter((r) => r.id !== membershipId));
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const deleteBuilding = async (buildingId: string) => {
+    if (!confirm("Are you sure you want to delete this building? This will remove all residents and data.")) return;
+    try {
+      await deleteDoc(doc(firestore, "buildings", buildingId));
+      const membSnap = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", buildingId)));
+      for (const mem of membSnap.docs) await deleteDoc(doc(firestore, "memberships", mem.id));
+      const invSnap = await getDocs(query(collection(firestore, "invitations"), where("buildingId", "==", buildingId)));
+      for (const inv of invSnap.docs) await deleteDoc(doc(firestore, "invitations", inv.id));
+      setBuildings((prev) => prev.filter((b) => b.id !== buildingId));
+      setSelectedBuilding(null);
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const filtered = buildings.filter((b) =>
+    b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    b.address?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-orange-100 text-orange-700",
+    "in-progress": "bg-blue-100 text-blue-700",
+    resolved: "bg-emerald-100 text-emerald-700",
+  };
+
+  const alertTypeColors: Record<string, string> = {
+    emergency: "bg-red-100 text-red-700",
+    warning: "bg-orange-100 text-orange-700",
+    info: "bg-blue-100 text-blue-700",
+    maintenance: "bg-purple-100 text-purple-700",
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+return (
+    <div className="flex gap-6 h-full">
+      {/* Buildings list */}
+      <div className="w-80 shrink-0 space-y-3">
+
+        {/* Add building button */}
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="w-full flex items-center justify-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-emerald-600 transition shadow-md"
+        >
+          + Add Building
+        </button>
+
+        {/* Add building form */}
+        {showAddForm && (
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 space-y-3">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">New Building</h3>
+            <input
+              type="text"
+              placeholder="Building Name"
+              value={addForm.name}
+              onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+            <input
+              type="text"
+              placeholder="Address"
+              value={addForm.address}
+              onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                placeholder="Floors"
+                value={addForm.floors}
+                onChange={(e) => setAddForm({ ...addForm, floors: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <input
+                type="number"
+                placeholder="Units"
+                value={addForm.units}
+                onChange={(e) => setAddForm({ ...addForm, units: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={addBuilding}
+                disabled={addingSaving}
+                className="flex-1 bg-emerald-500 text-white text-xs font-semibold py-2 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
+              >
+                {addingSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="flex-1 border border-gray-200 text-gray-500 text-xs py-2 rounded-xl hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search buildings..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          />
+        </div>
+        {filtered.map((b) => (
+          <button
+            key={b.id}
+            onClick={() => selectBuilding(b)}
+            className={`w-full text-left bg-white dark:bg-gray-900 rounded-2xl border p-4 space-y-2 transition-all ${
+              selectedBuilding?.id === b.id
+                ? "border-emerald-500 shadow-md shadow-emerald-100"
+                : "border-gray-100 dark:border-gray-800 hover:shadow-md"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm">{b.name}</h3>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
+                {b.ownerId ? "✅ Owner" : "⚠️ No Owner"}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400">{b.address}</p>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Users className="w-3 h-3" />
+              <span>{b.residentsCount} residents</span>
+            </div>
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center text-gray-400 text-sm py-8">No buildings found</p>
+        )}
+      </div>
+
+      {/* Building details */}
+      {selectedBuilding ? (
+        <div className="flex-1 space-y-6 overflow-auto">
+
+          {/* Header */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedBuilding.name}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{selectedBuilding.address}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowEditForm(!showEditForm)}
+                  className="text-xs bg-emerald-500 text-white px-4 py-2 rounded-xl hover:bg-emerald-600 transition"
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => deleteBuilding(selectedBuilding.id)}
+                  className="text-xs bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+
+            {/* Edit form */}
+            {showEditForm && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Name</label>
+                  <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Address</label>
+                  <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Floors</label>
+                  <input type="number" value={editForm.floors} onChange={(e) => setEditForm({ ...editForm, floors: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Units</label>
+                  <input type="number" value={editForm.units} onChange={(e) => setEditForm({ ...editForm, units: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                </div>
+                <div className="col-span-2 flex gap-2">
+                  <button onClick={saveEdit} disabled={saving}
+                    className="bg-emerald-500 text-white text-xs px-4 py-2 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60">
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                  <button onClick={() => setShowEditForm(false)}
+                    className="border border-gray-200 text-gray-500 text-xs px-4 py-2 rounded-xl hover:bg-gray-50 transition">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-3 mt-4">
+              {[
+                { label: "Floors", value: selectedBuilding.floors || 0, color: "bg-gray-50 dark:bg-gray-800" },
+                { label: "Units", value: selectedBuilding.units || 0, color: "bg-gray-50 dark:bg-gray-800" },
+                { label: "Residents", value: buildingResidents.length, color: "bg-emerald-50 dark:bg-emerald-900/20" },
+                { label: "Alerts", value: buildingAlerts.length, color: "bg-orange-50 dark:bg-orange-900/20" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className={`${color} rounded-xl p-3 text-center`}>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{value}</p>
+                  <p className="text-xs text-gray-500">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {loadingDetails ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <>
+              {/* Residents */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-500" /> Residents ({buildingResidents.length})
+                </h3>
+                {buildingResidents.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No residents yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {buildingResidents.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs">
+                            {r.fullName?.[0]?.toUpperCase() || "?"}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{r.fullName}</p>
+                            <p className="text-xs text-gray-400">{r.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.role === "owner" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                            {r.role}
+                          </span>
+                          <button
+                            onClick={() => removeResident(r.id, r.userId)}
+                            className="text-xs text-red-400 hover:text-red-600 border border-red-200 px-2 py-1 rounded-lg transition"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Alerts */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-orange-500" /> Alerts ({buildingAlerts.length})
+                </h3>
+                {buildingAlerts.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No alerts yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {buildingAlerts.slice(0, 5).map((alert) => (
+                      <div key={alert.id} className="flex items-start gap-3 py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${alertTypeColors[alert.type] || "bg-blue-100 text-blue-700"}`}>
+                          {alert.type}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{alert.title}</p>
+                          <p className="text-xs text-gray-400">by {alert.userName}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Maintenance */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-blue-500" /> Maintenance ({buildingMaintenance.length})
+                </h3>
+                {buildingMaintenance.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No maintenance requests yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {buildingMaintenance.slice(0, 5).map((m) => (
+                      <div key={m.id} className="flex items-start gap-3 py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusColors[m.status] || statusColors.pending}`}>
+                          {m.status}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{m.title}</p>
+                          <p className="text-xs text-gray-400">by {m.userName} • {m.category}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto">
+              <Building2 className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 dark:text-gray-400">Select a building to view details</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -260,9 +761,7 @@ function UsersSection() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
     try {
@@ -313,10 +812,8 @@ function UsersSection() {
           <p className="text-sm text-gray-500 dark:text-gray-400">{users.length} total users</p>
         </div>
       </div>
-
-      {/* Search bar */}
       <div className="relative">
-        <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
           placeholder="Search by name or email..."
@@ -325,23 +822,19 @@ function UsersSection() {
           className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
         />
       </div>
-
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Building</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change Role</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Change Role</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
             {filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center py-10 text-gray-400 text-sm">No users found.</td>
-              </tr>
+              <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">No users found.</td></tr>
             )}
             {filtered.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
@@ -358,9 +851,6 @@ function UsersSection() {
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full ${roleColors[u.role] || roleColors.user}`}>
                     {u.role}
                   </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {u.buildingId || "—"}
                 </td>
                 <td className="px-6 py-4">
                   <select
@@ -383,58 +873,35 @@ function UsersSection() {
   );
 }
 
-// ── Buildings Section ─────────────────────────────────────
-function BuildingsSection() {
+// ── Assign Owners Section ─────────────────────────────────
+function AssignOwnersSection() {
   const [buildings, setBuildings] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [owners, setOwners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState({ name: "", address: "", floors: "", units: "" });
-  const [saving, setSaving] = useState(false);
+  const [ownerSearch, setOwnerSearch] = useState<Record<string, string>>({});
   const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [selectedOwners, setSelectedOwners] = useState<Record<string, string>>({}); // 👈 added
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
       const buildSnap = await getDocs(collection(firestore, "buildings"));
       const userSnap = await getDocs(collection(firestore, "users"));
-      setBuildings(buildSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setUsers(
-        userSnap.docs
-          .map((d) => ({ id: d.id, ...(d.data() as any) }))
-          .filter((u) => u.role === "owner")
-      );
+      const buildingsList = await Promise.all(buildSnap.docs.map(async (d) => {
+        const b = { id: d.id, ...d.data() } as any;
+        if (b.ownerId) {
+          const ownerSnap = await getDoc(doc(firestore, "users", b.ownerId));
+          if (ownerSnap.exists()) b.owner = ownerSnap.data();
+        }
+        return b;
+      }));
+      setBuildings(buildingsList);
+      setOwners(userSnap.docs.map((d) => ({ id: d.id, ...d.data() as any })).filter((u) => u.role === "owner" || u.role === "user"));
     } catch (err) {
       console.log("Error:", err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const addBuilding = async () => {
-    if (!form.name || !form.address) return;
-    setSaving(true);
-    try {
-      const docRef = await addDoc(collection(firestore, "buildings"), {
-        name: form.name,
-        address: form.address,
-        floors: Number(form.floors) || 0,
-        units: Number(form.units) || 0,
-        ownerId: null,
-        createdAt: serverTimestamp(),
-      });
-      setBuildings((prev) => [...prev, { id: docRef.id, ...form, ownerId: null }]);
-      setForm({ name: "", address: "", floors: "", units: "" });
-      setShowForm(false);
-    } catch (err) {
-      console.log("Error:", err);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -444,23 +911,11 @@ function BuildingsSection() {
       const buildingSnap = await getDoc(doc(firestore, "buildings", buildingId));
       const buildingData = buildingSnap.data();
 
-      // Delete old owner membership if exists
-      const oldMemberships = await getDocs(
-        query(
-          collection(firestore, "memberships"),
-          where("buildingId", "==", buildingId),
-          where("role", "==", "owner")
-        )
-      );
-      for (const oldMem of oldMemberships.docs) {
-        await deleteDoc(doc(firestore, "memberships", oldMem.id));
-      }
+      const oldMemberships = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", buildingId), where("role", "==", "owner")));
+      for (const oldMem of oldMemberships.docs) await deleteDoc(doc(firestore, "memberships", oldMem.id));
 
-      // Update building with new owner
       await updateDoc(doc(firestore, "buildings", buildingId), { ownerId });
       await updateDoc(doc(firestore, "users", ownerId), { buildingId, role: "owner" });
-
-      // Create new membership
       await addDoc(collection(firestore, "memberships"), {
         userId: ownerId,
         buildingId,
@@ -470,90 +925,32 @@ function BuildingsSection() {
         createdAt: serverTimestamp(),
       });
 
-      setBuildings((prev) =>
-        prev.map((b) => (b.id === buildingId ? { ...b, ownerId } : b))
-      );
-
-      // Clear selected owner after saving
-      setSelectedOwners((prev) => {
-        const updated = { ...prev };
-        delete updated[buildingId];
-        return updated;
-      });
-
+      const ownerData = owners.find((o) => o.id === ownerId);
+      setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, ownerId, owner: ownerData } : b));
+      setOwnerSearch((prev) => { const u = { ...prev }; delete u[buildingId]; return u; });
     } catch (err) {
-      console.log("Error assigning owner:", err);
+      console.log("Error:", err);
     } finally {
       setAssigningId(null);
     }
   };
 
-const removeBuilding = async (buildingId: string) => {
-    if (!confirm("Are you sure you want to delete this building?")) return;
+  const removeOwner = async (buildingId: string, ownerId: string) => {
+    if (!confirm("Remove this owner?")) return;
     try {
-      // Delete building
-      await deleteDoc(doc(firestore, "buildings", buildingId));
-
-      // Delete all memberships for this building
-      const membershipsSnap = await getDocs(
-        query(collection(firestore, "memberships"), where("buildingId", "==", buildingId))
-      );
-      for (const mem of membershipsSnap.docs) {
-        await deleteDoc(doc(firestore, "memberships", mem.id));
-      }
-
-      // Delete all invitations for this building
-      const invitationsSnap = await getDocs(
-        query(collection(firestore, "invitations"), where("buildingId", "==", buildingId))
-      );
-      for (const inv of invitationsSnap.docs) {
-        await deleteDoc(doc(firestore, "invitations", inv.id));
-      }
-
-      setBuildings((prev) => prev.filter((b) => b.id !== buildingId));
+      await updateDoc(doc(firestore, "buildings", buildingId), { ownerId: deleteField() });
+      await updateDoc(doc(firestore, "users", ownerId), { buildingId: deleteField() });
+      const membSnap = await getDocs(query(collection(firestore, "memberships"), where("buildingId", "==", buildingId), where("role", "==", "owner")));
+      for (const mem of membSnap.docs) await deleteDoc(doc(firestore, "memberships", mem.id));
+      setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, ownerId: null, owner: null } : b));
     } catch (err) {
-      console.log("Error removing building:", err);
+      console.log("Error:", err);
     }
   };
 
-const removeOwner = async (buildingId: string, ownerId: string) => {
-    if (!confirm("Are you sure you want to remove this owner?")) return;
-    try {
-      // Remove ownerId from building using deleteField
-      await updateDoc(doc(firestore, "buildings", buildingId), { 
-        ownerId: deleteField() // 👈 properly removes the field
-      });
-
-      // Remove buildingId from user
-      await updateDoc(doc(firestore, "users", ownerId), {
-        buildingId: deleteField() // 👈 properly removes the field
-      });
-
-      // Delete owner membership
-      const membershipsSnap = await getDocs(
-        query(
-          collection(firestore, "memberships"),
-          where("buildingId", "==", buildingId),
-          where("role", "==", "owner")
-        )
-      );
-      for (const mem of membershipsSnap.docs) {
-        await deleteDoc(doc(firestore, "memberships", mem.id));
-      }
-
-      // Update buildings state
-      setBuildings((prev) =>
-        prev.map((b) => (b.id === buildingId ? { ...b, ownerId: null } : b))
-      );
-    } catch (err) {
-      console.log("Error removing owner:", err);
-    }
-  };
-
-  const filtered = buildings.filter(
-    (b) =>
-      b.name?.toLowerCase().includes(search.toLowerCase()) ||
-      b.address?.toLowerCase().includes(search.toLowerCase())
+  const filtered = buildings.filter((b) =>
+    b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    b.address?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return (
@@ -564,177 +961,113 @@ const removeOwner = async (buildingId: string, ownerId: string) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Buildings</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{buildings.length} total buildings</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-emerald-600 transition shadow-md shadow-emerald-200"
-        >
-          + Add Building
-        </button>
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Assign Owners</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Assign owners to buildings</p>
       </div>
 
-      {/* Search bar */}
       <div className="relative">
-        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search by name or address..."
+          placeholder="Search buildings..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
         />
       </div>
 
-      {/* Add building form */}
-      {showForm && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4">
-          <h3 className="font-bold text-gray-900 dark:text-white">New Building</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Building Name</label>
-              <input
-                type="text"
-                placeholder="Al Noor Tower"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Address</label>
-              <input
-                type="text"
-                placeholder="Jeddah, Saudi Arabia"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Floors</label>
-              <input
-                type="number"
-                placeholder="10"
-                value={form.floors}
-                onChange={(e) => setForm({ ...form, floors: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Units</label>
-              <input
-                type="number"
-                placeholder="48"
-                value={form.units}
-                onChange={(e) => setForm({ ...form, units: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={addBuilding}
-              disabled={saving}
-              className="bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save Building"}
-            </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filtered.map((b) => {
+          const filteredOwners = owners.filter((o) =>
+            !ownerSearch[b.id] ||
+            o.fullName?.toLowerCase().includes(ownerSearch[b.id].toLowerCase()) ||
+            o.email?.toLowerCase().includes(ownerSearch[b.id].toLowerCase())
+          );
 
-      {/* Buildings grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filtered.map((b) => (
-          <div key={b.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-    <Building2 className="w-6 h-6 text-emerald-500" />
-  </div>
-  <div className="flex items-center gap-2">
-    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
-      {b.ownerId ? "Has Owner" : "No Owner"}
-    </span>
-    <button
-      onClick={() => removeBuilding(b.id)}
-      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition"
-    >
-      <X className="w-4 h-4" />
-    </button>
-  </div>
-</div>
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white">{b.name}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{b.address}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{b.floors || 0}</p>
-                <p className="text-xs text-gray-500">Floors</p>
+          return (
+            <div key={b.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${b.ownerId ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-600"}`}>
+                  {b.ownerId ? "Has Owner" : "No Owner"}
+                </span>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{b.units || 0}</p>
-                <p className="text-xs text-gray-500">Units</p>
+
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">{b.name}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{b.address}</p>
+              </div>
+
+              {/* Current owner */}
+              {b.owner && (
+                <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {b.owner.fullName?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">{b.owner.fullName}</p>
+                      <p className="text-xs text-gray-400">{b.owner.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeOwner(b.id, b.ownerId)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              {/* Search and assign owner */}
+              <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-medium text-gray-500">Assign New Owner</p>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={ownerSearch[b.id] || ""}
+                    onChange={(e) => setOwnerSearch((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                    className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                </div>
+                {ownerSearch[b.id] && (
+                  <div className="max-h-32 overflow-y-auto space-y-1 border border-gray-100 dark:border-gray-800 rounded-xl p-1">
+                    {filteredOwners.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-2">No users found</p>
+                    ) : (
+                      filteredOwners.slice(0, 5).map((o) => (
+                        <button
+                          key={o.id}
+                          onClick={() => assignOwner(b.id, o.id)}
+                          disabled={assigningId === b.id}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition text-left"
+                        >
+                          <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-xs font-bold shrink-0">
+                            {o.fullName?.[0]?.toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{o.fullName}</p>
+                            <p className="text-xs text-gray-400 truncate">{o.email}</p>
+                          </div>
+                          {assigningId === b.id ? (
+                            <div className="w-3 h-3 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <span className="text-xs text-emerald-500">Assign</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-
-{/* Assign owner */}
-<div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-  <div className="flex items-center justify-between">
-    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Assign Owner</p>
-    {b.ownerId && (
-      <button
-        onClick={() => removeOwner(b.id, b.ownerId)}
-        className="text-xs text-red-500 hover:underline font-medium"
-      >
-        Remove Owner
-      </button>
-    )}
-  </div>
-  {users.length === 0 ? (
-    <p className="text-xs text-orange-500">No owners available. Change a user role to Owner first.</p>
-  ) : (
-    <div className="space-y-2">
-      <select
-        value={selectedOwners[b.id] || b.ownerId || ""}
-        onChange={(e) => setSelectedOwners((prev) => ({ ...prev, [b.id]: e.target.value }))}
-        className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-      >
-        <option value="">Select owner...</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
-        ))}
-      </select>
-      <button
-        onClick={() => {
-          const ownerId = selectedOwners[b.id];
-          if (ownerId) assignOwner(b.id, ownerId);
-        }}
-        disabled={assigningId === b.id || !selectedOwners[b.id]}
-        className="w-full py-2 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition disabled:opacity-50"
-      >
-        {assigningId === b.id ? "Saving..." : "Save Owner ✓"}
-      </button>
-    </div>
-  )}
-</div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="col-span-3 text-center py-16 text-gray-400">
-            {search ? "No buildings match your search." : "No buildings yet. Click \"Add Building\" to get started!"}
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );

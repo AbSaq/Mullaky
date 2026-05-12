@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Wrench,
   Send,
   UserPlus,
   TrendingUp,
@@ -36,6 +37,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "../../hooks/useAuth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { useAlerts } from "../../hooks/useAlerts";
 
 
 export const Route = createFileRoute("/owner/dashboard")({
@@ -43,6 +45,7 @@ export const Route = createFileRoute("/owner/dashboard")({
 });
 
 function OwnerDashboard() {
+  const [showAlertDropdown, setShowAlertDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [building, setBuilding] = useState<any>(null);
@@ -54,46 +57,60 @@ function OwnerDashboard() {
 
   // Get selected building from sessionStorage
   const selectedMembership = JSON.parse(sessionStorage.getItem("selectedBuilding") || "{}");
+  const { alerts: recentAlerts, unreadCount, markAllRead } = useAlerts(selectedMembership?.buildingId || "");
 
-  const fetchBuildingData = async () => {
+const fetchBuildingData = async () => {
     if (!selectedMembership?.buildingId) return;
     try {
       // Get building info
       const buildingSnap = await getDoc(doc(firestore, "buildings", selectedMembership.buildingId));
       if (buildingSnap.exists()) setBuilding({ id: buildingSnap.id, ...buildingSnap.data() });
 
-      // Get residents from memberships
+      // Get residents
       const residentsSnap = await getDocs(
         query(collection(firestore, "memberships"), where("buildingId", "==", selectedMembership.buildingId))
       );
-// Get pending invitations for this owner as a user
-if (user) {
-  const invSnap = await getDocs(
-    query(
-      collection(firestore, "invitations"),
-      where("toUserId", "==", user.uid),
-      where("status", "==", "pending")
-    )
-  );
-  setPendingInvites(invSnap.size);
-}
-      // Get full user data for each resident
       const residentsList = await Promise.all(
         residentsSnap.docs.map(async (d) => {
           const memberData = d.data();
           const userSnap = await getDoc(doc(firestore, "users", memberData.userId));
-          return {
-            id: d.id,
-            ...memberData,
-            ...userSnap.data(),
-          };
+          return { id: d.id, ...memberData, ...userSnap.data() };
         })
       );
+      setResidents(residentsList);
 
-setResidents(residentsList);
-      setStats((prev) => ({ ...prev, residents: residentsList.length }));
+      // Get alerts count
+      const alertsSnap = await getDocs(
+        query(collection(firestore, "alerts"), where("buildingId", "==", selectedMembership.buildingId))
+      );
 
-      // Get pending invitations for this owner
+      // Get maintenance count (pending + in-progress)
+      const maintenanceSnap = await getDocs(
+        query(collection(firestore, "maintenance"), where("buildingId", "==", selectedMembership.buildingId))
+      );
+      const activeMaintenace = maintenanceSnap.docs.filter(
+        (d) => d.data().status === "pending" || d.data().status === "in-progress"
+      ).length;
+
+      // Get latest finance total
+      const financesSnap = await getDocs(
+        query(collection(firestore, "finances"), where("buildingId", "==", selectedMembership.buildingId))
+      );
+      let latestFinance = 0;
+      if (!financesSnap.empty) {
+        const finances = financesSnap.docs.map((d) => ({ ...d.data() }));
+        finances.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+        latestFinance = finances[0].totalCollected || 0;
+      }
+
+      setStats({
+        residents: residentsList.length,
+        alerts: alertsSnap.size,
+        maintenance: activeMaintenace,
+        finances: latestFinance,
+      });
+
+      // Get pending invitations
       const invSnap = await getDocs(
         query(
           collection(firestore, "invitations"),
@@ -118,9 +135,15 @@ setResidents(residentsList);
     }
   }, [user, role, loading]);
 
-  useEffect(() => {
+useEffect(() => {
     if (user) fetchBuildingData();
   }, [user]);
+
+useEffect(() => {
+    if (activeTab === "overview" && user) {
+      fetchBuildingData();
+    }
+  }, [activeTab]);
 
   if (loading || !role) {
     return (
@@ -143,15 +166,16 @@ const navItems = [
     { id: "residents", label: "Residents", icon: Users },
     { id: "invite", label: "Invite Users", icon: UserPlus },
     { id: "myinvitations", label: "My Invitations", icon: Mail, badge: pendingInvites },
+    { id: "maintenance", label: "Maintenance", icon: Wrench },
     { id: "finances", label: "Finances", icon: DollarSign },
     { id: "alerts", label: "Alerts", icon: Bell },
   ];
 
-  const statCards = [
+const statCards = [
     { label: "Total Residents", value: stats.residents, icon: Users, color: "blue" },
-    { label: "Active Alerts", value: stats.alerts, icon: AlertTriangle, color: "orange" },
-    { label: "Maintenance", value: stats.maintenance, icon: CheckCircle2, color: "emerald" },
-    { label: "Finances", value: "SAR 0", icon: DollarSign, color: "purple" },
+    { label: "Alerts", value: stats.alerts, icon: AlertTriangle, color: "orange" },
+    { label: "Active Maintenance", value: stats.maintenance, icon: CheckCircle2, color: "emerald" },
+    { label: "Latest Collection", value: `SAR ${stats.finances.toLocaleString()}`, icon: DollarSign, color: "purple" },
   ];
 
   return (
@@ -241,10 +265,57 @@ const navItems = [
               {building ? building.name : "No building assigned yet"}
             </p>
           </div>
-          <button className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <Bell className="w-5 h-5 text-gray-500" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+<div className="relative">
+  <button
+    onClick={() => { setShowAlertDropdown(!showAlertDropdown); markAllRead(); }}
+    className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+  >
+    <Bell className="w-5 h-5 text-gray-500" />
+    {unreadCount > 0 && (
+      <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+        {unreadCount > 9 ? "9+" : unreadCount}
+      </span>
+    )}
+  </button>
+
+  {/* Alert dropdown */}
+  {showAlertDropdown && (
+    <div className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl z-50">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm">Alerts</h3>
+        <button onClick={() => setShowAlertDropdown(false)} className="text-gray-400 hover:text-gray-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="max-h-80 overflow-y-auto">
+        {recentAlerts.length === 0 ? (
+          <div className="p-6 text-center text-gray-400 text-sm">No alerts yet</div>
+        ) : (
+          recentAlerts.map((alert: any) => (
+            <div key={alert.id} className={`p-4 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition ${
+              alert.type === "emergency" ? "border-l-2 border-l-red-500" :
+              alert.type === "warning" ? "border-l-2 border-l-orange-500" : ""
+            }`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  alert.type === "emergency" ? "bg-red-100 text-red-700" :
+                  alert.type === "warning" ? "bg-orange-100 text-orange-700" :
+                  alert.type === "maintenance" ? "bg-purple-100 text-purple-700" :
+                  "bg-blue-100 text-blue-700"
+                }`}>
+                  {alert.type === "emergency" ? "🚨" : alert.type === "warning" ? "⚠️" : alert.type === "maintenance" ? "🔧" : "ℹ️"} {alert.type}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{alert.title}</p>
+              {alert.message && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{alert.message}</p>}
+              <p className="text-xs text-gray-400 mt-1">by {alert.userName} • {alert.createdAt?.toDate?.()?.toLocaleDateString() || "Just now"}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )}
+</div>
         </div>
 
         <div className="p-8">
@@ -298,13 +369,10 @@ const navItems = [
                 
               )
               }
+            {/* Latest finance summary */}
+              <LatestFinanceSummary buildingId={selectedMembership?.buildingId || ""} />
             </div>
-            
-          )}
-
-          
-          {/* Latest finance summary */}
-          <LatestFinanceSummary buildingId={selectedMembership?.buildingId || ""} />
+               )}
 
 
           {/* ── Residents ── */}
@@ -335,8 +403,21 @@ const navItems = [
 {activeTab === "finances" && (
   <FinancesSection buildingId={selectedMembership?.buildingId || ""} />
 )}
+
+{activeTab === "maintenance" && (
+  <OwnerMaintenanceSection buildingId={selectedMembership?.buildingId || ""} />
+)}
+
+{activeTab === "alerts" && (
+  <AlertsSection
+    buildingId={selectedMembership?.buildingId || ""}
+    userId={user?.uid || ""}
+    userName={userData?.fullName || ""}
+  />
+)}
+
 {/* ── Coming soon ── */}
-{activeTab !== "overview" && activeTab !== "residents" && activeTab !== "invite" && activeTab !== "myinvitations" && activeTab !== "finances" && (
+{activeTab !== "overview" && activeTab !== "residents" && activeTab !== "invite" && activeTab !== "myinvitations" && activeTab !== "finances" && activeTab !== "maintenance" && activeTab !== "alerts" && (
             <div className="flex items-center justify-center h-64">
               <div className="text-center space-y-3">
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto">
@@ -1042,10 +1123,12 @@ function LatestFinanceSummary({ buildingId }: { buildingId: string }) {
       const snap = await getDocs(
         query(collection(firestore, "finances"), where("buildingId", "==", buildingId))
       );
-      if (!snap.empty) {
-        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setLatest(docs[docs.length - 1]);
-      }
+if (!snap.empty) {
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sort by createdAt to get the latest
+  docs.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+  setLatest(docs[0]); // 👈 first item after sorting = latest
+}
     } catch (err) {
       console.log("Error:", err);
     }
@@ -1105,6 +1188,611 @@ function LatestFinanceSummary({ buildingId }: { buildingId: string }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Owner Maintenance Section ─────────────────────────────
+function OwnerMaintenanceSection({ buildingId }: { buildingId: string }) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"list" | "kanban">("kanban");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [showNoticeForm, setShowNoticeForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [noticeForm, setNoticeForm] = useState({
+  title: "",
+  description: "",
+  category: "General",
+  status: "in-progress",
+});
+  
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(firestore, "maintenance"), where("buildingId", "==", buildingId))
+      );
+      setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    setUpdatingId(id);
+    try {
+      await updateDoc(doc(firestore, "maintenance", id), {
+        status,
+        updatedAt: serverTimestamp(),
+      });
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const saveNotes = async (id: string) => {
+    try {
+      await updateDoc(doc(firestore, "maintenance", id), {
+        ownerNotes: noteText,
+        updatedAt: serverTimestamp(),
+      });
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, ownerNotes: noteText } : r));
+      setEditingNotes(null);
+      setNoteText("");
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const addNotice = async () => {
+if (!noticeForm.title) return;
+  setSaving(true);
+  try {
+    const docRef = await addDoc(collection(firestore, "maintenance"), {
+      buildingId,
+      userId: "owner",
+      userName: "Building Management",
+      title: noticeForm.title,
+      description: noticeForm.description,
+      category: noticeForm.category,
+      status: noticeForm.status,
+      visibility: "public",
+      isOwnerNotice: true,
+      ownerNotes: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    setRequests((prev) => [...prev, {
+      id: docRef.id,
+      ...noticeForm,
+      buildingId,
+      userId: "owner",
+      userName: "Building Management",
+      visibility: "public",
+      isOwnerNotice: true,
+      ownerNotes: "",
+    }]);
+    setNoticeForm({ title: "", description: "", category: "General", status: "in-progress" });
+    setShowNoticeForm(false);
+  } catch (err) {
+    console.log("Error:", err);
+  } finally {
+    setSaving(false);
+  }
+};
+
+  const deleteRequest = async (id: string) => {
+    if (!confirm("Delete this request?")) return;
+    try {
+      await deleteDoc(doc(firestore, "maintenance", id));
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    "in-progress": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    resolved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  };
+
+  const statusIcons: Record<string, string> = {
+    pending: "🟡",
+    "in-progress": "🔵",
+    resolved: "✅",
+  };
+
+  const filtered = requests.filter((r) => {
+    const matchSearch = r.title?.toLowerCase().includes(search.toLowerCase()) ||
+      r.userName?.toLowerCase().includes(search.toLowerCase()) ||
+      r.category?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "all" || r.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const RequestCard = ({ r }: { r: any }) => (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">{r.title}</h3>
+              {r.isOwnerNotice && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+              📢 Notice
+              </span>
+              )}
+              </div>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.visibility === "public" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+              {r.visibility === "public" ? "🌍" : "🔒"}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{r.description}</p>
+        </div>
+        <button
+          onClick={() => deleteRequest(r.id)}
+          className="text-xs text-red-400 hover:text-red-600 shrink-0"
+        >✕</button>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
+          {r.category}
+        </span>
+        <span className="text-xs text-gray-400">by {r.userName}</span>
+      </div>
+
+      {/* Status selector */}
+      <div className="flex items-center gap-2">
+        <select
+          value={r.status}
+          disabled={updatingId === r.id}
+          onChange={(e) => updateStatus(r.id, e.target.value)}
+          className="flex-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="pending">🟡 Pending</option>
+          <option value="in-progress">🔵 In Progress</option>
+          <option value="resolved">✅ Resolved</option>
+        </select>
+        {updatingId === r.id && (
+          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        )}
+      </div>
+
+      {/* Owner notes */}
+      {editingNotes === r.id ? (
+        <div className="space-y-2">
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Add a note for the resident..."
+            rows={2}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => saveNotes(r.id)}
+              className="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition"
+            >
+              Save Note
+            </button>
+            <button
+              onClick={() => setEditingNotes(null)}
+              className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          {r.ownerNotes && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2.5 mb-2">
+              <p className="text-xs text-blue-600 dark:text-blue-300">{r.ownerNotes}</p>
+            </div>
+          )}
+          <button
+            onClick={() => { setEditingNotes(r.id); setNoteText(r.ownerNotes || ""); }}
+            className="text-xs text-blue-500 hover:underline"
+          >
+            {r.ownerNotes ? "Edit note" : "+ Add note"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Maintenance Requests</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{requests.length} total requests</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button
+              onClick={() => setView("list")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${view === "list" ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}
+            >
+              List
+            </button>
+            <button
+            onClick={() => setView("kanban")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${view === "kanban" ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}
+    >
+          Kanban
+          </button>
+            </div>
+          <button
+          onClick={() => setShowNoticeForm(!showNoticeForm)}
+          className="flex items-center gap-2 bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-600 transition shadow-md"
+          >
+          📢 Add Notice
+        </button>
+        </div>
+      </div>
+
+
+{/* Notice form */}
+{showNoticeForm && (
+  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-sm p-6 space-y-4">
+    <h3 className="font-bold text-gray-900 dark:text-white">📢 Add Building Notice</h3>
+    <p className="text-xs text-gray-500">This will be visible to all residents as a public notice.</p>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="col-span-2 space-y-1.5">
+        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Title</label>
+        <input
+          type="text"
+          placeholder="e.g. Elevator maintenance scheduled"
+          value={noticeForm.title}
+          onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
+          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+      <div className="col-span-2 space-y-1.5">
+        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Description</label>
+        <textarea
+          placeholder="Describe the maintenance work..."
+          value={noticeForm.description}
+          onChange={(e) => setNoticeForm({ ...noticeForm, description: e.target.value })}
+          rows={3}
+          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Category</label>
+        <select
+          value={noticeForm.category}
+          onChange={(e) => setNoticeForm({ ...noticeForm, category: e.target.value })}
+          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          {["General", "Plumbing", "Electrical", "HVAC", "Structural", "Cleaning", "Security", "Other"].map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Status</label>
+        <select
+          value={noticeForm.status}
+          onChange={(e) => setNoticeForm({ ...noticeForm, status: e.target.value })}
+          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="pending">🟡 Pending</option>
+          <option value="in-progress">🔵 In Progress</option>
+          <option value="resolved">✅ Resolved</option>
+        </select>
+      </div>
+    </div>
+    <div className="flex gap-3">
+      <button
+        onClick={addNotice}
+        disabled={saving}
+        className="bg-blue-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-blue-600 transition disabled:opacity-60"
+      >
+        {saving ? "Posting..." : "Post Notice"}
+      </button>
+      <button
+        onClick={() => setShowNoticeForm(false)}
+        className="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+
+
+      {/* Search and filter */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search requests..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-4 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="all">All Status</option>
+          <option value="pending">🟡 Pending</option>
+          <option value="in-progress">🔵 In Progress</option>
+          <option value="resolved">✅ Resolved</option>
+        </select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">No requests found</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No maintenance requests yet.</p>
+        </div>
+      ) : view === "list" ? (
+        <div className="space-y-3">
+          {filtered.map((r) => <RequestCard key={r.id} r={r} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {["pending", "in-progress", "resolved"].map((status) => (
+            <div key={status} className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span>{statusIcons[status]}</span>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 capitalize">
+                  {status.replace("-", " ")}
+                </h3>
+                <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                  {filtered.filter((r) => r.status === status).length}
+                </span>
+              </div>
+              {filtered.filter((r) => r.status === status).map((r) => (
+                <RequestCard key={r.id} r={r} />
+              ))}
+              {filtered.filter((r) => r.status === status).length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">No requests</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Alerts Section ────────────────────────────────────────
+function AlertsSection({ buildingId, userId, userName }: { buildingId: string, userId: string, userName: string }) {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const alertTypes = [
+    { value: "emergency", label: "🚨 Emergency", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+    { value: "warning", label: "⚠️ Warning", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+    { value: "info", label: "ℹ️ Info", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    { value: "maintenance", label: "🔧 Maintenance", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  ];
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(firestore, "alerts"), where("buildingId", "==", buildingId))
+      );
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setAlerts(list);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendAlert = async () => {
+if (!form.title) return;
+    setSaving(true);
+    try {
+      const docRef = await addDoc(collection(firestore, "alerts"), {
+        buildingId,
+        userId,
+        userName,
+        title: form.title,
+        message: form.message,
+        type: form.type,
+        createdAt: serverTimestamp(),
+      });
+      setAlerts((prev) => [{
+        id: docRef.id,
+        buildingId,
+        userId,
+        userName,
+        ...form,
+        createdAt: { seconds: Date.now() / 1000 },
+      }, ...prev]);
+      setForm({ title: "", message: "", type: "info" });
+      setShowForm(false);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteAlert = async (id: string) => {
+    if (!confirm("Delete this alert?")) return;
+    try {
+      await deleteDoc(doc(firestore, "alerts", id));
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    return alertTypes.find((t) => t.value === type)?.color || alertTypes[2].color;
+  };
+
+  const getTypeLabel = (type: string) => {
+    return alertTypes.find((t) => t.value === type)?.label || "ℹ️ Info";
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Alerts</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{alerts.length} total alerts</p>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-red-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-red-600 transition shadow-md"
+        >
+          🔔 Send Alert
+        </button>
+      </div>
+
+      {/* Send alert form */}
+      {showForm && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-800 shadow-sm p-6 space-y-4">
+          <h3 className="font-bold text-gray-900 dark:text-white">📢 Send Alert to All Residents</h3>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Alert Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {alertTypes.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setForm({ ...form, type: t.value })}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border-2 transition ${
+                      form.type === t.value
+                        ? "border-blue-500 " + t.color
+                        : "border-gray-200 dark:border-gray-700 text-gray-500"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Water cut scheduled"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Message</label>
+              <textarea
+                placeholder="Write your alert message..."
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={sendAlert}
+              disabled={saving}
+              className="bg-red-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-red-600 transition disabled:opacity-60"
+            >
+              {saving ? "Sending..." : "🔔 Send Alert"}
+            </button>
+            <button
+              onClick={() => setShowForm(false)}
+              className="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerts list */}
+      {alerts.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto">
+            <Bell className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">No alerts yet</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Click "Send Alert" to notify all residents.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {alerts.map((alert) => (
+            <div key={alert.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getTypeColor(alert.type)}`}>
+                      {getTypeLabel(alert.type)}
+                    </span>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{alert.title}</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>by {alert.userName}</span>
+                    <span>•</span>
+                    <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || "Just now"}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => deleteAlert(alert.id)}
+                  className="text-xs text-red-400 hover:text-red-600 shrink-0 transition"
+                >✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

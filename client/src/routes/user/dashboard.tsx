@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Wrench,
   Mail,
   Home,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  deleteDoc,
   addDoc,
   query,
   where,
@@ -30,7 +32,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "../../hooks/useAuth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
-
+import { useAlerts } from "../../hooks/useAlerts";
 export const Route = createFileRoute("/user/dashboard")({
   component: UserDashboard,
 });
@@ -45,6 +47,9 @@ const { user, userData, loading } = useAuth();
 
   // Get selected building from sessionStorage
   const selectedMembership = JSON.parse(sessionStorage.getItem("selectedBuilding") || "{}");
+  const { alerts: recentAlerts, unreadCount, markAllRead } = useAlerts(selectedMembership?.buildingId || "");
+  const [showAlertDropdown, setShowAlertDropdown] = useState(false);
+  
 
 const fetchData = async () => {
     try {
@@ -151,8 +156,8 @@ const fetchData = async () => {
 const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "invitations", label: "Invitations", icon: Mail, badge: invitations.length },
-    // Only show these if user has a building
     ...(selectedMembership?.buildingId ? [
+      { id: "maintenance", label: "Maintenance", icon: Wrench, badge: 0 },
       { id: "finances", label: "Finances", icon: DollarSign, badge: 0 },
       { id: "alerts", label: "Alerts", icon: Bell, badge: 0 },
     ] : []),
@@ -251,12 +256,56 @@ const navItems = [
               {building ? building.name : "No building selected"}
             </p>
           </div>
-          <button className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <Bell className="w-5 h-5 text-gray-500" />
-            {invitations.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            )}
-          </button>
+<div className="relative">
+  <button
+    onClick={() => { setShowAlertDropdown(!showAlertDropdown); markAllRead(); }}
+    className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+  >
+    <Bell className="w-5 h-5 text-gray-500" />
+    {unreadCount > 0 && (
+      <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+        {unreadCount > 9 ? "9+" : unreadCount}
+      </span>
+    )}
+  </button>
+
+  {showAlertDropdown && (
+    <div className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl z-50">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm">Alerts</h3>
+        <button onClick={() => setShowAlertDropdown(false)} className="text-gray-400 hover:text-gray-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="max-h-80 overflow-y-auto">
+        {recentAlerts.length === 0 ? (
+          <div className="p-6 text-center text-gray-400 text-sm">No alerts yet</div>
+        ) : (
+          recentAlerts.map((alert: any) => (
+            <div key={alert.id} className={`p-4 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition ${
+              alert.type === "emergency" ? "border-l-2 border-l-red-500" :
+              alert.type === "warning" ? "border-l-2 border-l-orange-500" : ""
+            }`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  alert.type === "emergency" ? "bg-red-100 text-red-700" :
+                  alert.type === "warning" ? "bg-orange-100 text-orange-700" :
+                  alert.type === "maintenance" ? "bg-purple-100 text-purple-700" :
+                  "bg-blue-100 text-blue-700"
+                }`}>
+                  {alert.type === "emergency" ? "🚨" : alert.type === "warning" ? "⚠️" : alert.type === "maintenance" ? "🔧" : "ℹ️"} {alert.type}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{alert.title}</p>
+              {alert.message && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{alert.message}</p>}
+              <p className="text-xs text-gray-400 mt-1">by {alert.userName} • {alert.createdAt?.toDate?.()?.toLocaleDateString() || "Just now"}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )}
+</div>
         </div>
 
         <div className="p-8">
@@ -264,15 +313,25 @@ const navItems = [
           {/* ── Overview ── */}
           {activeTab === "overview" && (
             <div className="space-y-8">
-              {/* Welcome card */}
-              <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-8 text-white">
-                <h2 className="text-2xl font-extrabold">
-                  Welcome, {userData?.fullName?.split(" ")[0]}! 👋
-                </h2>
-                <p className="text-emerald-100 mt-2">
-                  {building ? `You are a resident of ${building.name}` : `You have not joined a building yet.`}
-                </p>
-              </div>
+{/* Welcome card */}
+<div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-4 text-white flex items-center justify-between">
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-lg">
+      👋
+    </div>
+    <div>
+      <h2 className="text-base font-bold">
+        Welcome back, {userData?.fullName?.split(" ")[0]}!
+      </h2>
+      <p className="text-emerald-100 text-xs mt-0.5">
+        {building ? `Resident of ${building.name}` : "You have not joined a building yet."}
+      </p>
+    </div>
+  </div>
+  <div className="text-right hidden md:block">
+    <p className="text-xs text-emerald-100">{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+  </div>
+</div>
 
               {/* Building info */}
               {building ? (
@@ -309,13 +368,21 @@ const navItems = [
                   </button>
                 </div>
               )}
+            {/* Latest finance summary */}
+              {building && (
+                <UserLatestFinanceSummary buildingId={selectedMembership?.buildingId || ""} />
+              )}
+
+              {/* Alerts summary */}
+              {building && (
+                <UserAlertsSummary buildingId={selectedMembership?.buildingId || ""} />
+              )}
+
+            {/* Maintenance summary */}
+              {building && (
+              <UserMaintenanceSummary buildingId={selectedMembership?.buildingId || ""} userId={user?.uid || ""} />
+            )}
             </div>
-          )}
-
-
-          {/* Latest finance summary */}
-          {building && (
-          <UserLatestFinanceSummary buildingId={selectedMembership?.buildingId || ""} />
           )}
 
 
@@ -379,8 +446,25 @@ const navItems = [
 {activeTab === "finances" && (
   <UserFinancesSection buildingId={selectedMembership?.buildingId || ""} />
 )}
+
+{activeTab === "maintenance" && (
+  <UserMaintenanceSection
+    buildingId={selectedMembership?.buildingId || ""}
+    userId={user?.uid || ""}
+    userName={userData?.fullName || ""}
+  />
+)}
+
+{activeTab === "alerts" && (
+  <UserAlertsSection
+    buildingId={selectedMembership?.buildingId || ""}
+    userId={user?.uid || ""}
+    userName={userData?.fullName || ""}
+  />
+)}
+
           {/* ── Coming soon ── */}
-{activeTab !== "overview" && activeTab !== "invitations" && activeTab !== "finances" && (
+{activeTab !== "overview" && activeTab !== "invitations" && activeTab !== "finances" && activeTab !== "maintenance" && activeTab !== "alerts" && (
             <div className="flex items-center justify-center h-64">
               <div className="text-center space-y-3">
                 <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto">
@@ -530,10 +614,12 @@ function UserLatestFinanceSummary({ buildingId }: { buildingId: string }) {
       const snap = await getDocs(
         query(collection(firestore, "finances"), where("buildingId", "==", buildingId))
       );
-      if (!snap.empty) {
-        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setLatest(docs[docs.length - 1]);
-      }
+if (!snap.empty) {
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sort by createdAt to get the latest
+  docs.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+  setLatest(docs[0]); // 👈 first item after sorting = latest
+}
     } catch (err) {
       console.log("Error:", err);
     }
@@ -592,6 +678,661 @@ function UserLatestFinanceSummary({ buildingId }: { buildingId: string }) {
                 SAR {exp.amount?.toLocaleString()}
               </span>
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── User Maintenance Section ──────────────────────────────
+function UserMaintenanceSection({ buildingId, userId, userName }: { 
+  buildingId: string, 
+  userId: string,
+  userName: string 
+}) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<"list" | "kanban">("list");
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    category: "Plumbing",
+    visibility: "private",
+  });
+
+  const categories = ["Plumbing", "Electrical", "HVAC", "Structural", "Cleaning", "Security", "Other"];
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(firestore, "maintenance"),
+          where("buildingId", "==", buildingId)
+        )
+      );
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Show own requests + public requests
+      const filtered = all.filter((r: any) => r.userId === userId || r.visibility === "public");
+      setRequests(filtered);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitRequest = async () => {
+    if (!form.title || !form.description) return;
+    setSaving(true);
+    try {
+      const docRef = await addDoc(collection(firestore, "maintenance"), {
+        buildingId,
+        userId,
+        userName,
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        visibility: form.visibility,
+        status: "pending",
+        ownerNotes: "",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      setRequests((prev) => [...prev, {
+        id: docRef.id,
+        buildingId,
+        userId,
+        userName,
+        ...form,
+        status: "pending",
+        ownerNotes: "",
+      }]);
+      setForm({ title: "", description: "", category: "Plumbing", visibility: "private" });
+      setShowForm(false);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteRequest = async (id: string) => {
+    if (!confirm("Delete this request?")) return;
+    try {
+      await deleteDoc(doc(firestore, "maintenance", id));
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    "in-progress": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    resolved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  };
+
+  const statusIcons: Record<string, string> = {
+    pending: "🟡",
+    "in-progress": "🔵",
+    resolved: "✅",
+  };
+
+  const myRequests = requests.filter((r) => r.userId === userId);
+  const publicRequests = requests.filter((r) => r.userId !== userId && r.visibility === "public");
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const RequestCard = ({ r }: { r: any }) => (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-bold text-gray-900 dark:text-white">{r.title}</h3>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[r.status] || statusColors.pending}`}>
+              {statusIcons[r.status]} {r.status}
+            </span>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${r.visibility === "public" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+              {r.visibility === "public" ? "🌍 Public" : "🔒 Private"}
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{r.description}</p>
+        </div>
+        {r.userId === userId && (
+          <button
+            onClick={() => deleteRequest(r.id)}
+            className="text-xs text-red-400 hover:text-red-600 transition shrink-0"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-1 rounded-full">
+          {r.category}
+        </span>
+        {r.userId !== userId && (
+          <span className="text-xs text-gray-400">by {r.userName}</span>
+        )}
+      </div>
+      {r.ownerNotes && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+          <p className="text-xs font-medium text-blue-700 dark:text-blue-400">Owner note:</p>
+          <p className="text-xs text-blue-600 dark:text-blue-300 mt-0.5">{r.ownerNotes}</p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Maintenance</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{myRequests.length} your requests · {publicRequests.length} public</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button
+              onClick={() => setView("list")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${view === "list" ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setView("kanban")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${view === "kanban" ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}
+            >
+              Kanban
+            </button>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-emerald-600 transition shadow-md"
+          >
+            + New Request
+          </button>
+        </div>
+      </div>
+
+      {/* Submit form */}
+      {showForm && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4">
+          <h3 className="font-bold text-gray-900 dark:text-white">New Maintenance Request</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Water leak in bathroom"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Description</label>
+              <textarea
+                placeholder="Describe the issue in detail..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Visibility</label>
+              <select
+                value={form.visibility}
+                onChange={(e) => setForm({ ...form, visibility: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                <option value="private">🔒 Private — only me and owner</option>
+                <option value="public">🌍 Public — all residents can see</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={submitRequest}
+              disabled={saving}
+              className="bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
+            >
+              {saving ? "Submitting..." : "Submit Request"}
+            </button>
+            <button
+              onClick={() => setShowForm(false)}
+              className="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {requests.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">No requests yet</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Click "New Request" to submit a maintenance request.</p>
+        </div>
+      ) : view === "list" ? (
+        <div className="space-y-6">
+          {myRequests.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">My Requests</h3>
+              {myRequests.map((r) => <RequestCard key={r.id} r={r} />)}
+            </div>
+          )}
+          {publicRequests.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">Public Requests from Neighbors</h3>
+              {publicRequests.map((r) => <RequestCard key={r.id} r={r} />)}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Kanban view
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {["pending", "in-progress", "resolved"].map((status) => (
+            <div key={status} className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span>{statusIcons[status]}</span>
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 capitalize">{status.replace("-", " ")}</h3>
+                <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                  {requests.filter((r) => r.status === status).length}
+                </span>
+              </div>
+              {requests.filter((r) => r.status === status).map((r) => (
+                <RequestCard key={r.id} r={r} />
+              ))}
+              {requests.filter((r) => r.status === status).length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">No requests</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── User Alerts Section ───────────────────────────────────
+function UserAlertsSection({ buildingId, userId, userName }: { 
+  buildingId: string,
+  userId: string,
+  userName: string 
+}) {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const alertTypes = [
+    { value: "emergency", label: "🚨 Emergency", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+    { value: "warning", label: "⚠️ Warning", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+    { value: "info", label: "ℹ️ Info", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    { value: "maintenance", label: "🔧 Maintenance", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  ];
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(firestore, "alerts"), where("buildingId", "==", buildingId))
+      );
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setAlerts(list);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendAlert = async () => {
+if (!form.title) return;
+    setSaving(true);
+    try {
+      const docRef = await addDoc(collection(firestore, "alerts"), {
+        buildingId,
+        userId,
+        userName,
+        title: form.title,
+        message: form.message,
+        type: form.type,
+        createdAt: serverTimestamp(),
+      });
+      setAlerts((prev) => [{
+        id: docRef.id,
+        buildingId,
+        userId,
+        userName,
+        ...form,
+        createdAt: { seconds: Date.now() / 1000 },
+      }, ...prev]);
+      setForm({ title: "", message: "", type: "info" });
+      setShowForm(false);
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteAlert = async (id: string) => {
+    if (!confirm("Delete this alert?")) return;
+    try {
+      await deleteDoc(doc(firestore, "alerts", id));
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    return alertTypes.find((t) => t.value === type)?.color || alertTypes[2].color;
+  };
+
+  const getTypeLabel = (type: string) => {
+    return alertTypes.find((t) => t.value === type)?.label || "ℹ️ Info";
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Alerts</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{alerts.length} total alerts</p>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-red-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-red-600 transition shadow-md"
+        >
+          🔔 Send Alert
+        </button>
+      </div>
+
+      {/* Send alert form */}
+      {showForm && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-800 shadow-sm p-6 space-y-4">
+          <h3 className="font-bold text-gray-900 dark:text-white">📢 Send Alert to All Residents</h3>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Alert Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {alertTypes.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setForm({ ...form, type: t.value })}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border-2 transition ${
+                      form.type === t.value
+                        ? "border-emerald-500 " + t.color
+                        : "border-gray-200 dark:border-gray-700 text-gray-500"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Water leak on floor 3"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Message</label>
+              <textarea
+                placeholder="Describe the issue..."
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={sendAlert}
+              disabled={saving}
+              className="bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-emerald-600 transition disabled:opacity-60"
+            >
+              {saving ? "Sending..." : "🔔 Send Alert"}
+            </button>
+            <button
+              onClick={() => setShowForm(false)}
+              className="px-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerts list */}
+      {alerts.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto">
+            <Bell className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">No alerts</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No alerts for your building yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {alerts.map((alert) => (
+            <div key={alert.id} className={`bg-white dark:bg-gray-900 rounded-2xl border shadow-sm p-5 ${
+              alert.type === "emergency" ? "border-red-200 dark:border-red-800" :
+              alert.type === "warning" ? "border-orange-200 dark:border-orange-800" :
+              "border-gray-100 dark:border-gray-800"
+            }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getTypeColor(alert.type)}`}>
+                      {getTypeLabel(alert.type)}
+                    </span>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{alert.title}</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{alert.message}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span>by {alert.userName}</span>
+                    <span>•</span>
+                    <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || "Just now"}</span>
+                  </div>
+                </div>
+                {alert.userId === userId && (
+                  <button
+                    onClick={() => deleteAlert(alert.id)}
+                    className="text-xs text-red-400 hover:text-red-600 shrink-0 transition"
+                  >✕</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── User Alerts Summary ───────────────────────────────────
+function UserAlertsSummary({ buildingId }: { buildingId: string }) {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const alertTypes = [
+    { value: "emergency", label: "🚨 Emergency", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+    { value: "warning", label: "⚠️ Warning", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+    { value: "info", label: "ℹ️ Info", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    { value: "maintenance", label: "🔧 Maintenance", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  ];
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(firestore, "alerts"), where("buildingId", "==", buildingId))
+      );
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      list.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setAlerts(list.slice(0, 3)); // show latest 3
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTypeColor = (type: string) => alertTypes.find((t) => t.value === type)?.color || alertTypes[2].color;
+  const getTypeLabel = (type: string) => alertTypes.find((t) => t.value === type)?.label || "ℹ️ Info";
+
+  if (loading || alerts.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold text-gray-900 dark:text-white text-lg">Recent Alerts</h2>
+        <span className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">{alerts.length} latest</span>
+      </div>
+      <div className="space-y-3">
+        {alerts.map((alert) => (
+          <div key={alert.id} className={`rounded-xl p-4 border ${
+            alert.type === "emergency" ? "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800" :
+            alert.type === "warning" ? "border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800" :
+            "border-gray-100 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getTypeColor(alert.type)}`}>
+                {getTypeLabel(alert.type)}
+              </span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{alert.title}</span>
+            </div>
+            {alert.message && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{alert.message}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">by {alert.userName} • {alert.createdAt?.toDate?.()?.toLocaleDateString() || "Just now"}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── User Maintenance Summary ──────────────────────────────
+function UserMaintenanceSummary({ buildingId, userId }: { buildingId: string, userId: string }) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    "in-progress": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    resolved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  };
+
+  const statusIcons: Record<string, string> = {
+    pending: "🟡",
+    "in-progress": "🔵",
+    resolved: "✅",
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(firestore, "maintenance"), where("buildingId", "==", buildingId))
+      );
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const filtered = all.filter((r: any) => r.userId === userId || r.visibility === "public");
+      filtered.sort((a: any, b: any) => b.createdAt?.seconds - a.createdAt?.seconds);
+      setRequests(filtered.slice(0, 3)); // show latest 3
+    } catch (err) {
+      console.log("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || requests.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold text-gray-900 dark:text-white text-lg">Recent Maintenance</h2>
+        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">{requests.length} latest</span>
+      </div>
+      <div className="space-y-3">
+        {requests.map((r) => (
+          <div key={r.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[r.status] || statusColors.pending}`}>
+                {statusIcons[r.status]} {r.status}
+              </span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{r.title}</span>
+              {r.isOwnerNotice && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">📢 Notice</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">{r.category}</span>
+              <span className="text-xs text-gray-400">by {r.userName}</span>
+            </div>
+            {r.ownerNotes && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
+                <p className="text-xs text-blue-600 dark:text-blue-300">{r.ownerNotes}</p>
+              </div>
+            )}
           </div>
         ))}
       </div>
