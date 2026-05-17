@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Wrench,
@@ -69,10 +69,13 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col overflow-hidden">
       <div className="flex justify-between items-center shrink-0">
         <p className="text-sm text-gray-400 font-medium">
-          Drag-and-drop mapping substituted with rapid step-action controls for
-          functional consistency.
+          Use rapid step-action controls to move tasks seamlessly between kanban
+          lanes.
         </p>
-        {userRole === "user" && (
+
+        {(userRole === "user" ||
+          userRole === "owner" ||
+          userRole === "admin") && (
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm cursor-pointer"

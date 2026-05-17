@@ -47,7 +47,7 @@ function SelectBuildingPage() {
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-gray-900 dark:text-white text-lg tracking-tight">
-            Mulaky
+            Mullaky
           </span>
         </div>
         <div className="flex items-center gap-4">
