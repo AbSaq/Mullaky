@@ -17,6 +17,11 @@ import {
   updateMaintenanceStatus,
 } from "../controllers/maintenance.controller.js";
 
+import {
+  getBuildingFinanceLedger,
+  recordRentPayment,
+} from "../controllers/finance.controller.js";
+
 const router = Router();
 
 router.get("/selection", requireAuth, getBuildingSelectionData);
@@ -38,5 +43,8 @@ router.patch(
   requireAuth,
   updateMaintenanceStatus,
 );
+
+router.get("/:buildingId/finances", requireAuth, getBuildingFinanceLedger);
+router.post("/:buildingId/finances/pay", requireAuth, recordRentPayment);
 
 export default router;
