@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Navbar } from "../../components/Navbar/Navbar.tsx";
-import { HeroSection } from "./-hero-section.tsx";
-import { FeaturesSection } from "./-features-section.tsx";
-import { HowItWorksSection } from "./-how-it-works-section.tsx";
-import { BenefitsSection } from "./-benefits-section.tsx";
-import { Footer } from "./-footer-section.tsx";
-import { CTASection } from "./-cta-section.tsx";
+import { Navbar } from "../../features/home/components/Navbar/Navbar.tsx";
+import { HeroSection } from "../../features/home/components/-hero-section.tsx";
+import { FeaturesSection } from "../../features/home/components/-features-section.tsx";
+import { HowItWorksSection } from "../../features/home/components/-how-it-works-section.tsx";
+import { BenefitsSection } from "../../features/home/components/-benefits-section.tsx";
+import { Footer } from "../../features/home/components/-footer-section.tsx";
+import { CTASection } from "../../features/home/components/-cta-section.tsx";
 import { userStatusQueryOptions } from "../../features/auth/queries/userQueries.ts";
 
 export const Route = createFileRoute("/home/")({
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/home/")({
       userStatusQueryOptions(),
     );
     return { user };
-  };,
+  },
   component: LandingPage,
 });
 
