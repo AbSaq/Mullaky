@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../types/types.js";
+import type { AuthRequest } from "../types/index.js";
 import * as authService from "../services/auth.service.js";
 
 export const loginSync = async (

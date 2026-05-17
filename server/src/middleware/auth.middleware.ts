@@ -1,14 +1,14 @@
-import type { Response, NextFunction } from "express";
+import type { NextFunction, Response } from "express";
 import jwt from "jsonwebtoken";
-import type { AuthRequest, User } from "../types/types.js";
+import type { AuthRequest, User } from "../types/index.js";
 
-const secret = process.env.JWT_SECRET || "fallback_development_secret";
+const secret: string = process.env.JWT_SECRET ?? "fallback_development_secret";
 
-const authMiddleware = (
+export const requireAuth = (
   req: AuthRequest,
   res: Response,
   next: NextFunction,
-) => {
+): void => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -18,12 +18,19 @@ const authMiddleware = (
 
   const token = authHeader.split(" ")[1];
 
+  if (!token) {
+    res
+      .status(401)
+      .json({ message: "Access Denied: Bearer token is missing or malformed" });
+    return;
+  }
+
   try {
-    req.user = jwt.verify(token, secret) as User;
+    const decoded = jwt.verify(token, secret);
+    req.user = decoded as unknown as User;
+
     next();
-  } catch {
-    res.status(401).json({ message: "Invalid or expired token" });
+  } catch (error) {
+    res.status(403).json({ message: "Invalid or expired token" });
   }
 };
-
-export default authMiddleware;
