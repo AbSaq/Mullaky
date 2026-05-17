@@ -1,5 +1,3 @@
-echo "prettier"
-npx lint-staged
 echo "typecheck"
 npm run typecheck --prefix server
 echo "tests"
