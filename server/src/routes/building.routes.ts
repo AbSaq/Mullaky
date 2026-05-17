@@ -22,6 +22,11 @@ import {
   recordRentPayment,
 } from "../controllers/finance.controller.js";
 
+import {
+  getBuildingAlerts,
+  broadcastBuildingAlert,
+} from "../controllers/alert.controller.js";
+
 const router = Router();
 
 router.get("/selection", requireAuth, getBuildingSelectionData);
@@ -46,5 +51,8 @@ router.patch(
 
 router.get("/:buildingId/finances", requireAuth, getBuildingFinanceLedger);
 router.post("/:buildingId/finances/pay", requireAuth, recordRentPayment);
+
+router.get("/:buildingId/alerts", requireAuth, getBuildingAlerts);
+router.post("/:buildingId/alerts", requireAuth, broadcastBuildingAlert);
 
 export default router;
