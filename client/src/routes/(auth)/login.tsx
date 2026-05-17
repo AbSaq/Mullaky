@@ -11,7 +11,6 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
 
-  // Consume our feature hook abstraction
   const { login, isLoading, error } = useAuth();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,7 +40,7 @@ function LoginPage() {
       {/* Interactive Form Panel */}
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
             Sign in
           </h1>
 
@@ -66,7 +65,7 @@ function LoginPage() {
                     onChange={(e) =>
                       setForm({ ...form, email: e.target.value })
                     }
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none dark:text-white"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none dark:text-white"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -85,13 +84,13 @@ function LoginPage() {
                     onChange={(e) =>
                       setForm({ ...form, password: e.target.value })
                     }
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none dark:text-white"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none dark:text-white"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-200 transition-colors"
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -117,7 +116,7 @@ function LoginPage() {
               </button>
             </form>
 
-            {/* 💡 Account Creation Anchor Redirect Options */}
+            {/* Account Creation Anchor Redirect Options */}
             <div className="text-center pt-2 border-t border-gray-100 dark:border-gray-700/60 text-sm">
               <span className="text-gray-500 dark:text-gray-400">
                 Don't have an account yet?{" "}
