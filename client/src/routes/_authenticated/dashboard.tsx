@@ -9,6 +9,7 @@ import { BuildingDetailsSection } from "../../features/dashboard/components/Buil
 import { ResidentsSection } from "../../features/residents/components/ResidentsSection";
 import { InviteSection } from "../../features/residents/components/InvitesSection";
 import { MaintenanceSection } from "../../features/maintenance/components/MaintenanceSection.tsx";
+import { FinancesSection } from "../../features/finance/components/FinanaceComponent.tsx";
 
 const PlaceholderSection = ({ title }: { title: string }) => (
   <div className="p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-sm text-gray-400">
@@ -146,8 +147,8 @@ function UnifiedMasterDashboard() {
           userRole={user.role}
         />
       )}
-      {activeTab === "finances" && (
-        <PlaceholderSection title="Recharts Analytics Reporting Canvas" />
+      {activeTab === "finances" && currentBuildingId && (
+        <FinancesSection buildingId={currentBuildingId} userRole={user.role} />
       )}
       {activeTab === "alerts" && (
         <PlaceholderSection title="System-Wide Network Warning Broadcaster" />
