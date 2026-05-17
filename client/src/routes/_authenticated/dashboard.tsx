@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { dashboardOverviewQueryOptions } from "../../features/dashboard/queries/dashboardQueries";
 import { UnifiedDashboardShell } from "../../features/dashboard/components/UnifiedDashboardShell";
+import { UsersSection } from "../../features/dashboard/components/UsersSection";
+import { AssignOwnersSection } from "../../features/dashboard/components/AssignOwnersSection";
 
 const PlaceholderSection = ({ title }: { title: string }) => (
   <div className="p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-sm text-gray-400">
@@ -38,6 +40,13 @@ function UnifiedMasterDashboard() {
   const { data, isLoading } = useQuery(
     dashboardOverviewQueryOptions(currentBuildingId),
   );
+
+  // Sync back to matching dashboard tabs if an admin switches active layouts dynamically
+  useEffect(() => {
+    if (user.role === "admin" && activeTab === "buildingdetails") {
+      setActiveTab("buildings");
+    }
+  }, [activeTab, user.role]);
 
   if (isLoading || !data) {
     return (
@@ -113,12 +122,13 @@ function UnifiedMasterDashboard() {
       {activeTab === "buildings" && (
         <PlaceholderSection title="Global Administration Infrastructure Manager" />
       )}
-      {activeTab === "users" && (
-        <PlaceholderSection title="System Access Control Accounts Registry" />
-      )}
+
+      {activeTab === "users" && <UsersSection />}
+
       {activeTab === "assign-owners" && (
-        <PlaceholderSection title="Corporate Ownership Mapping Node" />
+        <AssignOwnersSection buildingsData={data.buildingsData || []} />
       )}
+
       {activeTab === "residents" && (
         <PlaceholderSection title="Occupant Operational Roster" />
       )}
