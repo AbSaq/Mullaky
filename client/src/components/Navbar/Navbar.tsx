@@ -3,11 +3,11 @@ import { Building2, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { DesktopNavItem, MobileNavItem } from "./NavItems.tsx";
 import { UserMenu } from "./UserMenu.tsx";
-import type { User } from "../../types/auth.ts";
+import type { UserStatusResponse } from "../../features/auth/queries/userQueries.ts";
 import "./navbar.css";
 
 interface SharedNavbarProps {
-  user?: User | null;
+  user?: UserStatusResponse | null;
   variant?: "landing" | "authenticated";
 }
 
@@ -16,6 +16,9 @@ export function Navbar({
   variant = "landing",
 }: Readonly<SharedNavbarProps>) {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // 💡 Check explicit boolean status flag instead of raw object truthiness
+  const isUserLoggedIn = !!user?.isAuthenticated;
 
   const navItems =
     variant === "landing"
@@ -51,7 +54,7 @@ export function Navbar({
         </nav>
 
         <div className="navbar-actions">
-          {user ? (
+          {isUserLoggedIn && user ? (
             <UserMenu user={user} />
           ) : (
             <Link to="/login" className="navbar-cta">
@@ -77,7 +80,7 @@ export function Navbar({
               onClose={() => setMenuOpen(false)}
             />
           ))}
-          {user ? (
+          {isUserLoggedIn && user ? (
             <UserMenu user={user} isMobile />
           ) : (
             <Link to="/login" className="navbar-mobile-cta">

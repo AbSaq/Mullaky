@@ -1,20 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Navbar } from "../../components/Navbar/Navbar.tsx";
-import { userQueryOptions } from "../../features/auth/useUser.ts";
-
 import { HeroSection } from "./-hero-section.tsx";
 import { FeaturesSection } from "./-features-section.tsx";
 import { HowItWorksSection } from "./-how-it-works-section.tsx";
 import { BenefitsSection } from "./-benefits-section.tsx";
 import { Footer } from "./-footer-section.tsx";
 import { CTASection } from "./-cta-section.tsx";
+import { userStatusQueryOptions } from "../../features/auth/queries/userQueries.ts";
 
-export const Route = createFileRoute("/_home/")({
+export const Route = createFileRoute("/home/")({
   beforeLoad: async ({ context }) => {
-    const user = await context.queryClient.ensureQueryData(userQueryOptions);
+    const user = await context.queryClient.ensureQueryData(
+      userStatusQueryOptions(),
+    );
     return { user };
-  },
+  };,
   component: LandingPage,
 });
 
