@@ -11,6 +11,12 @@ import {
   removeResidentMembership,
 } from "../controllers/resident.controller.js";
 
+import {
+  getBuildingMaintenance,
+  createMaintenanceRequest,
+  updateMaintenanceStatus,
+} from "../controllers/maintenance.controller.js";
+
 const router = Router();
 
 router.get("/selection", requireAuth, getBuildingSelectionData);
@@ -24,5 +30,13 @@ router.delete(
 );
 router.get("/:buildingId/invitations", requireAuth, getSentBuildingInvitations);
 router.post("/:buildingId/invitations", requireAuth, createBuildingInvitation);
+
+router.get("/:buildingId/maintenance", requireAuth, getBuildingMaintenance);
+router.post("/:buildingId/maintenance", requireAuth, createMaintenanceRequest);
+router.patch(
+  "/:buildingId/maintenance/:requestId/status",
+  requireAuth,
+  updateMaintenanceStatus,
+);
 
 export default router;
