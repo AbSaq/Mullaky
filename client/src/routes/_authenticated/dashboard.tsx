@@ -10,12 +10,7 @@ import { ResidentsSection } from "../../features/residents/components/ResidentsS
 import { InviteSection } from "../../features/residents/components/InvitesSection";
 import { MaintenanceSection } from "../../features/maintenance/components/MaintenanceSection.tsx";
 import { FinancesSection } from "../../features/finance/components/FinanaceComponent.tsx";
-
-const PlaceholderSection = ({ title }: { title: string }) => (
-  <div className="p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-sm text-gray-400">
-    {title} module rendering sequence initialized.
-  </div>
-);
+import { AlertsSection } from "../../features/alerts/components/AlertsSection.tsx";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: UnifiedMasterDashboard,
@@ -150,8 +145,8 @@ function UnifiedMasterDashboard() {
       {activeTab === "finances" && currentBuildingId && (
         <FinancesSection buildingId={currentBuildingId} userRole={user.role} />
       )}
-      {activeTab === "alerts" && (
-        <PlaceholderSection title="System-Wide Network Warning Broadcaster" />
+      {activeTab === "alerts" && currentBuildingId && (
+        <AlertsSection buildingId={currentBuildingId} userRole={user.role} />
       )}
     </UnifiedDashboardShell>
   );
