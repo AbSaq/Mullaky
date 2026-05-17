@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { UserStatusResponse } from "../../features/auth/queries/userQueries.ts";
+import type { UserStatusResponse } from "../../../auth/queries/userQueries.ts";
 
 interface UserMenuProps {
   user: UserStatusResponse;

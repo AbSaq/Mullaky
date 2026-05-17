@@ -3,7 +3,7 @@ import { Building2, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { DesktopNavItem, MobileNavItem } from "./NavItems.tsx";
 import { UserMenu } from "./UserMenu.tsx";
-import type { UserStatusResponse } from "../../features/auth/queries/userQueries.ts";
+import type { UserStatusResponse } from "../../../auth/queries/userQueries.ts";
 import "./navbar.css";
 
 interface SharedNavbarProps {

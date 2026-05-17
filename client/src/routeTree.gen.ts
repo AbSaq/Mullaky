@@ -8,210 +8,209 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as AuthenticatedRouteRouteImport } from "./routes/_authenticated/route";
-import { Route as HomeIndexRouteImport } from "./routes/home/index";
-import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
-import { Route as AuthenticationRegisterRouteImport } from "./routes/_authentication/register";
-import { Route as AuthenticationLoginRouteImport } from "./routes/_authentication/login";
-import { Route as AuthenticatedVerifyEmailRouteImport } from "./routes/_authenticated/verify-email";
-import { Route as AuthenticatedPropertyIndexRouteImport } from "./routes/_authenticated/property/index";
-import { Route as AuthenticatedPropertyPropertyIdRouteImport } from "./routes/_authenticated/property/$propertyId";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as HomeIndexRouteImport } from './routes/home/index'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedVerifyEmailRouteImport } from './routes/_authenticated/verify-email'
+import { Route as AuthenticatedSelectBuildingRouteImport } from './routes/_authenticated/select-building'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as authRegisterRouteImport } from './routes/(auth)/register'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: "/_authenticated",
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const HomeIndexRoute = HomeIndexRouteImport.update({
-  id: "/home/",
-  path: "/home/",
+  id: '/home/',
+  path: '/home/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any);
-const AuthenticationRegisterRoute = AuthenticationRegisterRouteImport.update({
-  id: "/_authentication/register",
-  path: "/register",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const AuthenticationLoginRoute = AuthenticationLoginRouteImport.update({
-  id: "/_authentication/login",
-  path: "/login",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AuthenticatedVerifyEmailRoute =
   AuthenticatedVerifyEmailRouteImport.update({
-    id: "/verify-email",
-    path: "/verify-email",
+    id: '/verify-email',
+    path: '/verify-email',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
-const AuthenticatedPropertyIndexRoute =
-  AuthenticatedPropertyIndexRouteImport.update({
-    id: "/property/",
-    path: "/property/",
+  } as any)
+const AuthenticatedSelectBuildingRoute =
+  AuthenticatedSelectBuildingRouteImport.update({
+    id: '/select-building',
+    path: '/select-building',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
-const AuthenticatedPropertyPropertyIdRoute =
-  AuthenticatedPropertyPropertyIdRouteImport.update({
-    id: "/property/$propertyId",
-    path: "/property/$propertyId",
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any);
+  } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const authRegisterRoute = authRegisterRouteImport.update({
+  id: '/(auth)/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authLoginRoute = authLoginRouteImport.update({
+  id: '/(auth)/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof AuthenticatedIndexRoute;
-  "/verify-email": typeof AuthenticatedVerifyEmailRoute;
-  "/login": typeof AuthenticationLoginRoute;
-  "/register": typeof AuthenticationRegisterRoute;
-  "/home/": typeof HomeIndexRoute;
-  "/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/property/": typeof AuthenticatedPropertyIndexRoute;
+  '/': typeof AuthenticatedIndexRoute
+  '/login': typeof authLoginRoute
+  '/register': typeof authRegisterRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/select-building': typeof AuthenticatedSelectBuildingRoute
+  '/verify-email': typeof AuthenticatedVerifyEmailRoute
+  '/home/': typeof HomeIndexRoute
 }
 export interface FileRoutesByTo {
-  "/verify-email": typeof AuthenticatedVerifyEmailRoute;
-  "/login": typeof AuthenticationLoginRoute;
-  "/register": typeof AuthenticationRegisterRoute;
-  "/": typeof AuthenticatedIndexRoute;
-  "/home": typeof HomeIndexRoute;
-  "/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/property": typeof AuthenticatedPropertyIndexRoute;
+  '/login': typeof authLoginRoute
+  '/register': typeof authRegisterRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/select-building': typeof AuthenticatedSelectBuildingRoute
+  '/verify-email': typeof AuthenticatedVerifyEmailRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/home': typeof HomeIndexRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/_authenticated": typeof AuthenticatedRouteRouteWithChildren;
-  "/_authenticated/verify-email": typeof AuthenticatedVerifyEmailRoute;
-  "/_authentication/login": typeof AuthenticationLoginRoute;
-  "/_authentication/register": typeof AuthenticationRegisterRoute;
-  "/_authenticated/": typeof AuthenticatedIndexRoute;
-  "/home/": typeof HomeIndexRoute;
-  "/_authenticated/property/$propertyId": typeof AuthenticatedPropertyPropertyIdRoute;
-  "/_authenticated/property/": typeof AuthenticatedPropertyIndexRoute;
+  __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/(auth)/login': typeof authLoginRoute
+  '/(auth)/register': typeof authRegisterRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/select-building': typeof AuthenticatedSelectBuildingRoute
+  '/_authenticated/verify-email': typeof AuthenticatedVerifyEmailRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/home/': typeof HomeIndexRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/verify-email"
-    | "/login"
-    | "/register"
-    | "/home/"
-    | "/property/$propertyId"
-    | "/property/";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/login'
+    | '/register'
+    | '/dashboard'
+    | '/select-building'
+    | '/verify-email'
+    | '/home/'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/verify-email"
-    | "/login"
-    | "/register"
-    | "/"
-    | "/home"
-    | "/property/$propertyId"
-    | "/property";
+    | '/login'
+    | '/register'
+    | '/dashboard'
+    | '/select-building'
+    | '/verify-email'
+    | '/'
+    | '/home'
   id:
-    | "__root__"
-    | "/_authenticated"
-    | "/_authenticated/verify-email"
-    | "/_authentication/login"
-    | "/_authentication/register"
-    | "/_authenticated/"
-    | "/home/"
-    | "/_authenticated/property/$propertyId"
-    | "/_authenticated/property/";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/_authenticated'
+    | '/(auth)/login'
+    | '/(auth)/register'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/select-building'
+    | '/_authenticated/verify-email'
+    | '/_authenticated/'
+    | '/home/'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren;
-  AuthenticationLoginRoute: typeof AuthenticationLoginRoute;
-  AuthenticationRegisterRoute: typeof AuthenticationRegisterRoute;
-  HomeIndexRoute: typeof HomeIndexRoute;
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  authLoginRoute: typeof authLoginRoute
+  authRegisterRoute: typeof authRegisterRoute
+  HomeIndexRoute: typeof HomeIndexRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/_authenticated": {
-      id: "/_authenticated";
-      path: "";
-      fullPath: "/";
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/home/": {
-      id: "/home/";
-      path: "/home";
-      fullPath: "/home/";
-      preLoaderRoute: typeof HomeIndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated/": {
-      id: "/_authenticated/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authentication/register": {
-      id: "/_authentication/register";
-      path: "/register";
-      fullPath: "/register";
-      preLoaderRoute: typeof AuthenticationRegisterRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authentication/login": {
-      id: "/_authentication/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof AuthenticationLoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/_authenticated/verify-email": {
-      id: "/_authenticated/verify-email";
-      path: "/verify-email";
-      fullPath: "/verify-email";
-      preLoaderRoute: typeof AuthenticatedVerifyEmailRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/property/": {
-      id: "/_authenticated/property/";
-      path: "/property";
-      fullPath: "/property/";
-      preLoaderRoute: typeof AuthenticatedPropertyIndexRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
-    "/_authenticated/property/$propertyId": {
-      id: "/_authenticated/property/$propertyId";
-      path: "/property/$propertyId";
-      fullPath: "/property/$propertyId";
-      preLoaderRoute: typeof AuthenticatedPropertyPropertyIdRouteImport;
-      parentRoute: typeof AuthenticatedRouteRoute;
-    };
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home/': {
+      id: '/home/'
+      path: '/home'
+      fullPath: '/home/'
+      preLoaderRoute: typeof HomeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/verify-email': {
+      id: '/_authenticated/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof AuthenticatedVerifyEmailRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/select-building': {
+      id: '/_authenticated/select-building'
+      path: '/select-building'
+      fullPath: '/select-building'
+      preLoaderRoute: typeof AuthenticatedSelectBuildingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/(auth)/register': {
+      id: '/(auth)/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof authRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedVerifyEmailRoute: typeof AuthenticatedVerifyEmailRoute;
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute;
-  AuthenticatedPropertyPropertyIdRoute: typeof AuthenticatedPropertyPropertyIdRoute;
-  AuthenticatedPropertyIndexRoute: typeof AuthenticatedPropertyIndexRoute;
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSelectBuildingRoute: typeof AuthenticatedSelectBuildingRoute
+  AuthenticatedVerifyEmailRoute: typeof AuthenticatedVerifyEmailRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSelectBuildingRoute: AuthenticatedSelectBuildingRoute,
   AuthenticatedVerifyEmailRoute: AuthenticatedVerifyEmailRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedPropertyPropertyIdRoute: AuthenticatedPropertyPropertyIdRoute,
-  AuthenticatedPropertyIndexRoute: AuthenticatedPropertyIndexRoute,
-};
+}
 
 const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren);
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthenticationLoginRoute: AuthenticationLoginRoute,
-  AuthenticationRegisterRoute: AuthenticationRegisterRoute,
+  authLoginRoute: authLoginRoute,
+  authRegisterRoute: authRegisterRoute,
   HomeIndexRoute: HomeIndexRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

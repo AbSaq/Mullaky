@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Building2, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useAuth } from "../../features/auth/hooks/useAuth";
 
-export const Route = createFileRoute("/_authentication/login")({
+export const Route = createFileRoute("/(auth)/login")({
   component: LoginPage,
 });
 

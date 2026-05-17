@@ -1,5 +1,5 @@
 import { Wrench, Bell, ClipboardList, Activity } from "lucide-react";
-import { SectionHeader } from "./-shared-helpers";
+import { SectionHeader } from "./-shared-helpers.tsx";
 
 // ─── Features ─────────────────────────────────────────────────────────────────
 
