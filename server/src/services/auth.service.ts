@@ -123,6 +123,11 @@ export const getUserProfileStatus = async (uid: string) => {
     isVerified: firebaseUser.emailVerified,
     role,
     targetRoute,
+    user: {
+      email: firebaseUser.email,
+      fullName: userData.fullName || "",
+      role,
+    },
   };
 };
 
