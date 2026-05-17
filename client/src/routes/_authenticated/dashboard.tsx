@@ -8,6 +8,7 @@ import { AssignOwnersSection } from "../../features/dashboard/components/AssignO
 import { BuildingDetailsSection } from "../../features/dashboard/components/BuildingDetailsSection";
 import { ResidentsSection } from "../../features/residents/components/ResidentsSection";
 import { InviteSection } from "../../features/residents/components/InvitesSection";
+import { MaintenanceSection } from "../../features/maintenance/components/MaintenanceSection.tsx";
 
 const PlaceholderSection = ({ title }: { title: string }) => (
   <div className="p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-sm text-gray-400">
@@ -139,8 +140,11 @@ function UnifiedMasterDashboard() {
       {activeTab === "invite" && currentBuildingId && (
         <InviteSection buildingId={currentBuildingId} />
       )}
-      {activeTab === "maintenance" && (
-        <PlaceholderSection title="Kanban Architecture Workspace Grid" />
+      {activeTab === "maintenance" && currentBuildingId && (
+        <MaintenanceSection
+          buildingId={currentBuildingId}
+          userRole={user.role}
+        />
       )}
       {activeTab === "finances" && (
         <PlaceholderSection title="Recharts Analytics Reporting Canvas" />
