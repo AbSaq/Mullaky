@@ -126,20 +126,12 @@ export const getUserProfileStatus = async (uid: string) => {
   };
 };
 
-// Internal utility function to calculate user dashboard destinations consistently
 const calculateTargetRoute = async (
   uid: string,
   role: string,
 ): Promise<string> => {
-  if (role === "admin") return "/admin/dashboard";
-
-  const membershipsSnap = await firestore
-    .collection("memberships")
-    .where("userId", "==", uid)
-    .get();
-
-  if (role === "owner" && membershipsSnap.empty) return "/select-building";
-  if (!membershipsSnap.empty) return "/select-building";
-
-  return "/user/dashboard";
+  if (role === "admin") {
+    return "/dashboard";
+  }
+  return "/select-building";
 };
