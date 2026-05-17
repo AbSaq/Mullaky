@@ -5,6 +5,9 @@ import { dashboardOverviewQueryOptions } from "../../features/dashboard/queries/
 import { UnifiedDashboardShell } from "../../features/dashboard/components/UnifiedDashboardShell";
 import { UsersSection } from "../../features/dashboard/components/UsersSection";
 import { AssignOwnersSection } from "../../features/dashboard/components/AssignOwnersSection";
+import { BuildingDetailsSection } from "../../features/dashboard/components/BuildingDetailsSection";
+import { ResidentsSection } from "../../features/residents/components/ResidentsSection";
+import { InviteSection } from "../../features/residents/components/InvitesSection";
 
 const PlaceholderSection = ({ title }: { title: string }) => (
   <div className="p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl text-center text-sm text-gray-400">
@@ -33,7 +36,7 @@ function UnifiedMasterDashboard() {
   // 3. Client storage fallback security redirect guard
   useEffect(() => {
     if (user.role !== "admin" && !currentBuildingId) {
-      navigate({ to: "/select-building" });
+      void navigate({ to: "/select-building" });
     }
   }, [user.role, currentBuildingId]);
 
@@ -120,7 +123,7 @@ function UnifiedMasterDashboard() {
 
       {/* ── Submodule Layout Router Interceptor Mapping Switches ── */}
       {activeTab === "buildings" && (
-        <PlaceholderSection title="Global Administration Infrastructure Manager" />
+        <BuildingDetailsSection buildingsData={data.buildingsData || []} />
       )}
 
       {activeTab === "users" && <UsersSection />}
@@ -129,11 +132,12 @@ function UnifiedMasterDashboard() {
         <AssignOwnersSection buildingsData={data.buildingsData || []} />
       )}
 
-      {activeTab === "residents" && (
-        <PlaceholderSection title="Occupant Operational Roster" />
+      {activeTab === "residents" && currentBuildingId && (
+        <ResidentsSection buildingId={currentBuildingId} />
       )}
-      {activeTab === "invite" && (
-        <PlaceholderSection title="Tenant Provisioning Outpost" />
+
+      {activeTab === "invite" && currentBuildingId && (
+        <InviteSection buildingId={currentBuildingId} />
       )}
       {activeTab === "maintenance" && (
         <PlaceholderSection title="Kanban Architecture Workspace Grid" />
