@@ -1,7 +1,6 @@
 import { Router } from "express";
 import * as authController from "../controllers/auth.controller.js";
-import authMiddleware from "../middleware/auth.middleware.js";
-
+import { requireAuth } from "../middleware/auth.middleware.js";
 const router = Router();
 
 // Public Authentication Endpoints
@@ -11,6 +10,6 @@ router.post("/check-verification", authController.checkVerification);
 router.post("/resend-verification", authController.resendVerification);
 
 // Guarded Identity Session Verification Endpoint
-router.get("/me", authMiddleware, authController.getMeStatus);
+router.get("/me", requireAuth, authController.getMeStatus);
 
 export default router;
