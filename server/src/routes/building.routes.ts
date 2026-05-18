@@ -18,6 +18,8 @@ import {
 } from "../controllers/maintenance.controller.js";
 
 import {
+  createOwnerExpenseReport,
+  deleteOwnerExpenseReport,
   getBuildingFinanceLedger,
   recordRentPayment,
 } from "../controllers/finance.controller.js";
@@ -54,5 +56,16 @@ router.post("/:buildingId/finances/pay", requireAuth, recordRentPayment);
 
 router.get("/:buildingId/alerts", requireAuth, getBuildingAlerts);
 router.post("/:buildingId/alerts", requireAuth, broadcastBuildingAlert);
+
+router.post(
+  "/:buildingId/finances/report",
+  requireAuth,
+  createOwnerExpenseReport,
+);
+router.delete(
+  "/:buildingId/finances/report/:reportId",
+  requireAuth,
+  deleteOwnerExpenseReport,
+);
 
 export default router;
