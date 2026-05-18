@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, Search, Wrench, Bell } from "lucide-react";
+import { Users, Search, Wrench, Bell, Building2 } from "lucide-react";
 import {
   buildingDetailsQueryOptions,
   useBuildingCrud,
@@ -157,20 +157,31 @@ export function BuildingDetailsSection({ buildingsData }: Props) {
 
         {selectedBuilding && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm space-y-6">
               <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                    <Building2 className="w-3 h-3" /> Node Active
+                  </span>
+                  <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white mt-2">
                     {selectedBuilding.name}
                   </h2>
-                  <p className="text-sm text-gray-400 mt-0.5">
+                  <p className="text-sm text-gray-400 font-medium">
                     {selectedBuilding.address}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setShowEditForm(!showEditForm)}
-                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition"
+                    onClick={() => {
+                      setForm({
+                        name: selectedBuilding.name,
+                        address: selectedBuilding.address,
+                        floors: String(selectedBuilding.floors || ""),
+                        units: String(selectedBuilding.units || ""),
+                      });
+                      setShowEditForm(!showEditForm);
+                    }}
+                    className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Edit Profile
                   </button>
@@ -181,35 +192,101 @@ export function BuildingDetailsSection({ buildingsData }: Props) {
                         setSelectedId(null);
                       }
                     }}
-                    className="px-3 py-1.5 bg-red-50 text-red-500 rounded-xl text-xs font-semibold hover:bg-red-100 cursor-pointer transition"
+                    className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     Delete
                   </button>
                 </div>
               </div>
 
+              {/* Permanent structural metric trackers built into header frame */}
+              <div className="grid grid-cols-2 gap-4 border-t border-b border-gray-50 dark:border-gray-800/60 py-4">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Total Levels
+                  </p>
+                  <p className="text-xl font-black text-gray-800 dark:text-gray-100">
+                    {selectedBuilding.floors || 0} Floors
+                  </p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Operational Capacity
+                  </p>
+                  <p className="text-xl font-black text-gray-800 dark:text-gray-100">
+                    {selectedBuilding.units || 0} Units Registry
+                  </p>
+                </div>
+              </div>
+
               {showEditForm && (
-                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-50 pt-4">
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={form.address}
-                    onChange={(e) =>
-                      setForm({ ...form, address: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border text-sm"
-                  />
-                  <button
-                    onClick={handleUpdate}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer"
-                  >
-                    Save Changes
-                  </button>
+                <div className="mt-4 grid grid-cols-2 gap-4 bg-gray-50/50 dark:bg-gray-800/20 p-4 rounded-xl border border-gray-100 dark:border-gray-800 animate-fadeIn">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">
+                      Building Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm({ ...form, name: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-xl border text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">
+                      Address Line
+                    </label>
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={(e) =>
+                        setForm({ ...form, address: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-xl border text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">
+                      Floors
+                    </label>
+                    <input
+                      type="number"
+                      value={form.floors}
+                      onChange={(e) =>
+                        setForm({ ...form, floors: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-xl border text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">
+                      Units
+                    </label>
+                    <input
+                      type="number"
+                      value={form.units}
+                      onChange={(e) =>
+                        setForm({ ...form, units: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-xl border text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                  <div className="col-span-2 flex gap-2 pt-2">
+                    <button
+                      onClick={handleUpdate}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-sm"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={() => setShowEditForm(false)}
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-500 rounded-xl text-xs font-bold cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

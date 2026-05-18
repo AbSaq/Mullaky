@@ -72,12 +72,24 @@ export function AssignOwnersSection({ buildingsData }: AssignOwnersProps) {
               </div>
 
               <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-xs font-medium text-gray-500">
-                  Assign Owner
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-500">
+                    {b.ownerId ? "Current Owner" : "Assign Owner"}
+                  </p>
+                  {b.ownerId && (
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md truncate max-w-[150px]">
+                      {users.find((u) => u.id === b.ownerId)?.fullName ||
+                        "Assigned"}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
-                  placeholder="Search owner matching criteria..."
+                  placeholder={
+                    b.ownerId
+                      ? "Change owner..."
+                      : "Search owner matching criteria..."
+                  }
                   value={currentSearch}
                   onChange={(e) =>
                     setOwnerSearch((prev) => ({
