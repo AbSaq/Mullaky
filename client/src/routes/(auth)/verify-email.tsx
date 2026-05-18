@@ -1,57 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Mail, RefreshCw } from "lucide-react";
-import {
-  checkVerificationRequest,
-  rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE,
-} from "../../features/auth/api/authApi.ts";
-import { useState } from "react";
+import { useEmailVerification } from "../../features/auth/hooks/useAuth";
 
 export const Route = createFileRoute("/(auth)/verify-email")({
   component: VerifyEmailPage,
 });
 
 function VerifyEmailPage() {
-  const queryClient = useQueryClient();
-  const [resent, setResent] = useState(false);
-  const email = localStorage.getItem("pendingEmail") || "";
-
-  const checkMutation = useMutation({
-    mutationFn: checkVerificationRequest,
-    onSuccess: (data) => {
-      if (data.verified) {
-        localStorage.removeItem("pendingEmail");
-        void queryClient.invalidateQueries({ queryKey: ["userStatus"] });
-      } else {
-        alert("Email not verified yet. Please check your inbox!");
-      }
-    },
-  });
-
-  const resendMutation = useMutation({
-    mutationFn: rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE,
-    onSuccess: () => {
-      setResent(true);
-      setTimeout(() => setResent(false), 5000);
-    },
-  });
-
-  const handleManualCheck = () => {
-    if (email) checkMutation.mutate({ email });
-  };
-
-  const handleResend = () => {
-    if (email) resendMutation.mutate({ email });
-  };
-
-  const handleSignOut = () => {
-    localStorage.removeItem("pendingEmail");
-    localStorage.removeItem("token");
-    queryClient.setQueryData(["userStatus"], {
-      isAuthenticated: false,
-      isVerified: false,
-    });
-  };
+  const {
+    handleManualCheck,
+    handleResend,
+    handleSignOut,
+    resent,
+    isChecking,
+    isResending,
+  } = useEmailVerification();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50/40 to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center px-6">
@@ -85,37 +48,33 @@ function VerifyEmailPage() {
 
           {resent && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-              ✅ Verification email resent! Check your inbox.
+              An activation sequence link has been resent! Check your inbox.
             </div>
           )}
 
           <div className="space-y-3">
             <button
               onClick={handleManualCheck}
-              disabled={checkMutation.isPending}
+              disabled={isChecking}
               className="w-full flex items-center justify-center gap-2 bg-emerald-500 text-white font-semibold py-3 rounded-xl hover:bg-emerald-600 transition shadow-md disabled:opacity-60 cursor-pointer"
             >
               <RefreshCw
-                className={`w-4 h-4 ${checkMutation.isPending ? `animate-spin` : ``}`}
+                className={`w-4 h-4 ${isChecking ? "animate-spin" : ""}`}
               />
-              {checkMutation.isPending
-                ? "Checking..."
-                : "I've verified my email"}
+              {isChecking ? "Checking Status..." : "I've verified my email"}
             </button>
 
             <button
               onClick={handleResend}
-              disabled={resendMutation.isPending}
+              disabled={isResending}
               className="w-full py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
             >
-              {resendMutation.isPending
-                ? "Sending..."
-                : "Resend verification email"}
+              {isResending ? "Resending Link..." : "Resend verification email"}
             </button>
 
             <button
               onClick={handleSignOut}
-              className="w-full py-3 rounded-xl text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="w-full py-3 rounded-xl text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition cursor-pointer font-medium"
             >
               Back to login
             </button>

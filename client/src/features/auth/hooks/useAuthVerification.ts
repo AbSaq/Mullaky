@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   checkVerificationRequest,
-  rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE,
+  resendVerificationRequest,
 } from "../api/authApi";
 
 export function useAuthVerification() {
@@ -24,7 +24,7 @@ export function useAuthVerification() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE,
+    mutationFn: resendVerificationRequest,
     onSuccess: () => {
       setResent(true);
       setTimeout(() => setResent(false), 5000);

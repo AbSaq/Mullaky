@@ -51,7 +51,7 @@ function RegisterPage() {
           className="flex items-center gap-3 text-white font-bold text-2xl"
         >
           <Building2 className="w-8 h-8" />
-          <span>Mulaky</span>
+          <span>Mullaky</span>
         </Link>
         <h2 className="text-4xl font-extrabold text-white leading-snug">
           Create your account

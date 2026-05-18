@@ -32,7 +32,7 @@ export const checkVerificationRequest = async (
   return data;
 };
 
-export const rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE = async (
+export const resendVerificationRequest = async (
   payload: ResendVerificationPayload,
 ): Promise<void> => {
   const { data } = await api.post<void>("/auth/resend-verification", payload);
