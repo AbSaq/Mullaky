@@ -2,9 +2,14 @@ import jwt from "jsonwebtoken";
 import { auth, firestore } from "../config/firebase.js";
 
 const secret = process.env.JWT_SECRET || "fallback_development_secret";
+const FIREBASE_WEB_API_KEY = process.env.FIREBASE_WEB_API_KEY || "";
+if (!FIREBASE_WEB_API_KEY) {
+  console.log("warning no firebase web api key");
+}
 
 interface LoginSyncPayload {
   email: string;
+  password: string;
 }
 
 interface RegisterPayload {
@@ -13,8 +18,38 @@ interface RegisterPayload {
   fullName: string;
 }
 
-export const processLoginSync = async ({ email }: LoginSyncPayload) => {
-  const firebaseUser = await auth.getUserByEmail(email);
+export const processLoginSync = async ({
+  email,
+  password,
+}: LoginSyncPayload) => {
+  let localId: string;
+
+  try {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_WEB_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          returnSecureToken: true,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    localId = data.localId;
+  } catch (error) {
+    throw new Error("INVALID_CREDENTIALS");
+  }
+
+  const firebaseUser = await auth.getUser(localId);
 
   if (!firebaseUser.emailVerified) {
     throw new Error("EMAIL_NOT_VERIFIED");
