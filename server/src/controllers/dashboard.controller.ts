@@ -17,26 +17,54 @@ export const getDashboardOverview = async (
 
     // ── ADMIN ROLE METRICS AGGREGATION ──
     if (role === "admin") {
-      const [usersSnap, buildingsSnap] = await Promise.all([
-        firestore.collection("users").get(),
+      const [buildingsSnap, usersSnap, alertsSnap] = await Promise.all([
         firestore.collection("buildings").get(),
+        firestore.collection("users").get(),
+        firestore.collection("alerts").get(),
       ]);
 
-      const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const buildings = buildingsSnap.docs.map((d) => ({
+      const recentActivity = [
+        {
+          type: "resolved",
+          text: "Issue resolved: Elevator Floor 3",
+          time: "2 min ago",
+        },
+        {
+          type: "warning",
+          text: "New alert: Water leak Apt 14B",
+          time: "15 min ago",
+        },
+        {
+          type: "user",
+          text: "New user registered: Sara Ahmed",
+          time: "1 hr ago",
+        },
+        {
+          type: "finance",
+          text: "Finance ledger matrix updated: May 2026",
+          time: "3 hr ago",
+        },
+        {
+          type: "building",
+          text: "New building added: Al Noor Tower",
+          time: "1 day ago",
+        },
+      ];
+
+      const buildingsList = buildingsSnap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
       }));
-
       res.status(200).json({
-        role,
+        role: "admin",
         stats: {
-          buildings: buildings.length,
-          users: users.length,
-          owners: users.filter((u: any) => u.role === "owner").length,
-          unassigned: buildings.filter((b: any) => !b.ownerId).length,
+          buildings: buildingsSnap.size,
+          users: usersSnap.size,
+          alerts: alertsSnap.size,
+          finances: 0,
         },
-        buildingsData: buildings,
+        buildingsData: buildingsList,
+        recentActivity,
       });
       return;
     }
