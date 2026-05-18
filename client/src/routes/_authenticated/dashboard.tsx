@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { dashboardOverviewQueryOptions } from "../../features/dashboard/queries/dashboardQueries";
 import { UnifiedDashboardShell } from "../../features/dashboard/components/UnifiedDashboardShell";
@@ -11,9 +11,17 @@ import { InviteSection } from "../../features/residents/components/InvitesSectio
 import { MaintenanceSection } from "../../features/maintenance/components/MaintenanceSection.tsx";
 import { FinancesSection } from "../../features/finance/components/FinanaceComponent.tsx";
 import { AlertsSection } from "../../features/alerts/components/AlertsSection.tsx";
+import { DashboardOverviewTab } from "../../features/dashboard/components/DashboardOverviewTab.tsx";
+import type { UserStatusResponse } from "../../features/auth/queries/userQueries.ts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: UnifiedMasterDashboard,
+  context: () => {
+    return {} as {
+      queryClient: QueryClient;
+      user: UserStatusResponse;
+    };
+  },
 });
 
 function UnifiedMasterDashboard() {
@@ -56,15 +64,6 @@ function UnifiedMasterDashboard() {
     );
   }
 
-  // Define active color indicators for interior welcome panels based on active roles
-  const welcomeGradient =
-    user.role === "owner"
-      ? "from-blue-500 to-indigo-600"
-      : "from-emerald-500 to-teal-600";
-
-  const accentText =
-    user.role === "owner" ? "text-blue-100" : "text-emerald-100";
-
   return (
     <UnifiedDashboardShell
       data={data}
@@ -72,50 +71,7 @@ function UnifiedMasterDashboard() {
       setActiveTab={setActiveTab}
     >
       {activeTab === "overview" && (
-        <div className="space-y-6">
-          <div
-            className={`bg-gradient-to-r ${welcomeGradient} p-6 rounded-2xl text-white shadow-sm`}
-          >
-            <h2 className="text-2xl font-bold tracking-tight">
-              Welcome back, {user.user?.fullName}!
-            </h2>
-            <p className={`${accentText} text-sm mt-1`}>
-              {user.role === "admin"
-                ? "Platform analytics engines reporting global configurations."
-                : `Workspace metrics tracking interface active for ${data.building?.name || "assigned building"}.`}
-            </p>
-          </div>
-
-          {/* Main Dashboard Stats Cards Grid Panel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/60 rounded-2xl shadow-sm hover:shadow-md transition duration-200">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Alert Notifications
-              </p>
-              <p className="text-3xl font-black text-gray-900 dark:text-white mt-2">
-                {data.stats.alerts}
-              </p>
-            </div>
-            <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/60 rounded-2xl shadow-sm hover:shadow-md transition duration-200">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Active Maintenance Tasks
-              </p>
-              <p className="text-3xl font-black text-gray-900 dark:text-white mt-2">
-                {data.stats.maintenance}
-              </p>
-            </div>
-            <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/60 rounded-2xl shadow-sm hover:shadow-md transition duration-200">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Financial Aggregates
-              </p>
-              <p className="text-3xl font-black text-gray-900 dark:text-white mt-2">
-                {user.role === "admin"
-                  ? `${data.stats.buildings ?? 0} Nodes`
-                  : `SAR ${data.stats.finances?.toLocaleString()}`}
-              </p>
-            </div>
-          </div>
-        </div>
+        <DashboardOverviewTab data={data} user={user} />
       )}
 
       {/* ── Submodule Layout Router Interceptor Mapping Switches ── */}
