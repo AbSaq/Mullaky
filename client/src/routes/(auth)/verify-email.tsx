@@ -4,10 +4,10 @@ import { Building2, Mail, RefreshCw } from "lucide-react";
 import {
   checkVerificationRequest,
   rfJi5GN23kBTCA6KLrWVND2B7BRERd9uE,
-} from "../../features/auth/api/authApi";
+} from "../../features/auth/api/authApi.ts";
 import { useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/verify-email")({
+export const Route = createFileRoute("/(auth)/verify-email")({
   component: VerifyEmailPage,
 });
 
@@ -96,7 +96,7 @@ function VerifyEmailPage() {
               className="w-full flex items-center justify-center gap-2 bg-emerald-500 text-white font-semibold py-3 rounded-xl hover:bg-emerald-600 transition shadow-md disabled:opacity-60 cursor-pointer"
             >
               <RefreshCw
-                className={`w-4 h-4 ${checkMutation.isPending ? "animate-spin" : ""}`}
+                className={`w-4 h-4 ${checkMutation.isPending ? `animate-spin` : ``}`}
               />
               {checkMutation.isPending
                 ? "Checking..."

@@ -12,9 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedVerifyEmailRouteImport } from './routes/_authenticated/verify-email'
 import { Route as AuthenticatedSelectBuildingRouteImport } from './routes/_authenticated/select-building'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 
@@ -32,12 +32,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedVerifyEmailRoute =
-  AuthenticatedVerifyEmailRouteImport.update({
-    id: '/verify-email',
-    path: '/verify-email',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedSelectBuildingRoute =
   AuthenticatedSelectBuildingRouteImport.update({
     id: '/select-building',
@@ -48,6 +42,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
+  id: '/(auth)/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const authRegisterRoute = authRegisterRouteImport.update({
   id: '/(auth)/register',
@@ -64,17 +63,17 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/select-building': typeof AuthenticatedSelectBuildingRoute
-  '/verify-email': typeof AuthenticatedVerifyEmailRoute
   '/home/': typeof HomeIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
+  '/verify-email': typeof authVerifyEmailRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/select-building': typeof AuthenticatedSelectBuildingRoute
-  '/verify-email': typeof AuthenticatedVerifyEmailRoute
   '/': typeof AuthenticatedIndexRoute
   '/home': typeof HomeIndexRoute
 }
@@ -83,9 +82,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/register': typeof authRegisterRoute
+  '/(auth)/verify-email': typeof authVerifyEmailRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/select-building': typeof AuthenticatedSelectBuildingRoute
-  '/_authenticated/verify-email': typeof AuthenticatedVerifyEmailRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/home/': typeof HomeIndexRoute
 }
@@ -95,17 +94,17 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/verify-email'
     | '/dashboard'
     | '/select-building'
-    | '/verify-email'
     | '/home/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/register'
+    | '/verify-email'
     | '/dashboard'
     | '/select-building'
-    | '/verify-email'
     | '/'
     | '/home'
   id:
@@ -113,9 +112,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/(auth)/login'
     | '/(auth)/register'
+    | '/(auth)/verify-email'
     | '/_authenticated/dashboard'
     | '/_authenticated/select-building'
-    | '/_authenticated/verify-email'
     | '/_authenticated/'
     | '/home/'
   fileRoutesById: FileRoutesById
@@ -124,6 +123,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   authLoginRoute: typeof authLoginRoute
   authRegisterRoute: typeof authRegisterRoute
+  authVerifyEmailRoute: typeof authVerifyEmailRoute
   HomeIndexRoute: typeof HomeIndexRoute
 }
 
@@ -150,13 +150,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/verify-email': {
-      id: '/_authenticated/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof AuthenticatedVerifyEmailRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/select-building': {
       id: '/_authenticated/select-building'
       path: '/select-building'
@@ -170,6 +163,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/register': {
       id: '/(auth)/register'
@@ -191,14 +191,12 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSelectBuildingRoute: typeof AuthenticatedSelectBuildingRoute
-  AuthenticatedVerifyEmailRoute: typeof AuthenticatedVerifyEmailRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSelectBuildingRoute: AuthenticatedSelectBuildingRoute,
-  AuthenticatedVerifyEmailRoute: AuthenticatedVerifyEmailRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
@@ -209,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   authLoginRoute: authLoginRoute,
   authRegisterRoute: authRegisterRoute,
+  authVerifyEmailRoute: authVerifyEmailRoute,
   HomeIndexRoute: HomeIndexRoute,
 }
 export const routeTree = rootRouteImport

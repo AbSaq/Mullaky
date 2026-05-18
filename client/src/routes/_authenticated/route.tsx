@@ -7,6 +7,9 @@ export const Route = createFileRoute("/_authenticated")({
       userStatusQueryOptions(),
     );
 
+    if (location.pathname === "/") {
+      return;
+    }
     if (!user.isAuthenticated) {
       throw redirect({
         to: "/login",
@@ -20,7 +23,6 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/verify-email" });
     }
 
-    // 3. Clear verified sessions out of verification pages
     if (user.isVerified && location.pathname === "/verify-email") {
       throw redirect({ to: user.targetRoute });
     }
