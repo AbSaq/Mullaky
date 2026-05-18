@@ -1,8 +1,6 @@
 import * as React from "react";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 
@@ -38,8 +36,6 @@ function RootComponent() {
     <React.Fragment>
       <Outlet />
       <DarkModeToggle />
-      <TanStackRouterDevtools />
-      <ReactQueryDevtools initialIsOpen={false} />
     </React.Fragment>
   );
 }
