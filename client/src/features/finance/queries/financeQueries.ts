@@ -14,6 +14,14 @@ export interface LedgerResponse {
     month: string;
     status: string;
   }>;
+  // ── ✅ ADDED METADATA INTERFACE ATTRIBUTE FOR BUILDINGS LOGS ──
+  ownerReports: Array<{
+    id: string;
+    month: string;
+    totalCollected: number;
+    notes?: string;
+    expenses: Array<{ name: string; amount: number }>;
+  }>;
 }
 
 export const buildingFinancesQueryOptions = (buildingId: string) =>
@@ -29,17 +37,54 @@ export const buildingFinancesQueryOptions = (buildingId: string) =>
 export function useFinanceOperations(buildingId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  // ── Existing Mutation (Untouched) ──
+  const payRentMutation = useMutation({
     mutationFn: async (body: { amount: number; month: string }) => {
       await api.post(`/buildings/${buildingId}/finances/pay`, body);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["buildingFinances", buildingId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["dashboardOverview", buildingId],
+      });
+    },
+  });
+
+  const saveReportMutation = useMutation({
+    mutationFn: async (body: {
+      month: string;
+      totalCollected: number;
+      expenses: Array<{ name: string; amount: number }>;
+      notes?: string;
+    }) => {
+      await api.post(`/buildings/${buildingId}/finances/report`, body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["buildingFinances", buildingId],
       });
+    },
+  });
+
+  const deleteReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      await api.delete(`/buildings/${buildingId}/finances/report/${reportId}`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["dashboardOverview", buildingId],
+        queryKey: ["buildingFinances", buildingId],
       });
     },
   });
+
+  // Return the complete collection of operation actions cleanly decoupled
+  return {
+    payRent: payRentMutation.mutateAsync,
+    isPaying: payRentMutation.isPending,
+    saveReport: saveReportMutation.mutateAsync,
+    isSaving: saveReportMutation.isPending,
+    deleteReport: deleteReportMutation.mutateAsync,
+  };
 }
