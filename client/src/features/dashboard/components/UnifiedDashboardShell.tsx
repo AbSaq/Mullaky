@@ -18,6 +18,7 @@ import type { UnifiedDashboardResponse } from "../queries/dashboardQueries";
 
 interface ShellProps {
   data: UnifiedDashboardResponse;
+  user: any;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   children: React.ReactNode;
@@ -25,6 +26,7 @@ interface ShellProps {
 
 export function UnifiedDashboardShell({
   data,
+  user,
   activeTab,
   setActiveTab,
   children,
@@ -121,11 +123,11 @@ export function UnifiedDashboardShell({
             <div
               className={`w-9 h-9 ${themeColor} rounded-full flex items-center justify-center text-white font-bold text-sm`}
             >
-              {role[0].toUpperCase()}
+              {(user.user?.fullName || role)[0].toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
-                {role}
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {user.user?.fullName || role}
               </p>
               <div className="flex items-center gap-1 mt-0.5">
                 {role === "owner" && (

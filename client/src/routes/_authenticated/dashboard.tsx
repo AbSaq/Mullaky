@@ -67,6 +67,7 @@ function UnifiedMasterDashboard() {
   return (
     <UnifiedDashboardShell
       data={data}
+      user={user}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
     >
