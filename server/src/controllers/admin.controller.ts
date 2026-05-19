@@ -38,6 +38,51 @@ export const updateUserRole = async (
   }
 };
 
+export const removeBuildingOwner = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (req.user?.role !== "admin") {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    const { buildingId } = req.body;
+    const batch = firestore.batch();
+
+    const buildingRef = firestore.collection("buildings").doc(buildingId);
+    const buildingDoc = await buildingRef.get();
+    const ownerId = buildingDoc.data()?.ownerId;
+
+    // Clear ownerId from building
+    batch.update(buildingRef, { ownerId: admin.firestore.FieldValue.delete() });
+
+    // Remove owner memberships for this building
+    const memberships = await firestore
+      .collection("memberships")
+      .where("buildingId", "==", buildingId)
+      .where("role", "==", "owner")
+      .get();
+
+    memberships.docs.forEach((d) => batch.delete(d.ref));
+
+    // Reset user role and clear buildingId
+    if (ownerId) {
+      const userRef = firestore.collection("users").doc(ownerId);
+      batch.update(userRef, {
+        role: "user",
+        buildingId: admin.firestore.FieldValue.delete(),
+      });
+    }
+
+    await batch.commit();
+    res.status(200).json({ message: "Owner removed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to remove owner" });
+  }
+};
+
 export const assignBuildingOwner = async (
   req: Request,
   res: Response,

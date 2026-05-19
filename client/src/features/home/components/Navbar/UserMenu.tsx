@@ -35,6 +35,12 @@ export const UserMenu = ({ user, isMobile = false }: UserMenuProps) => {
 
   return (
     <div className="flex items-center gap-2">
+      <button
+        onClick={() => navigate({ to: "/select-building" })}
+        className={`${buttonClass} cursor-pointer`}
+      >
+        Dashboard
+      </button>
       <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
         {userDisplayName}
       </span>

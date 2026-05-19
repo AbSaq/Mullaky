@@ -75,9 +75,21 @@ export const createOwnerExpenseReport = async (
     const { buildingId } = req.params;
     const { month, totalCollected, expenses, notes } = req.body;
 
-    if (req.user?.role !== "owner" && req.user?.role !== "admin") {
-      res.status(403).json({ message: "Privileged structural role needed." });
-      return;
+    const uid = req.user?.uid;
+    const jwtRole = req.user?.role;
+
+    if (jwtRole !== "admin") {
+      const membershipSnap = await firestore
+        .collection("memberships")
+        .where("userId", "==", uid)
+        .where("buildingId", "==", buildingId)
+        .get();
+
+      const membershipRole = membershipSnap.docs[0]?.data()?.role;
+      if (membershipRole !== "owner") {
+        res.status(403).json({ message: "Privileged structural role needed." });
+        return;
+      }
     }
 
     const newReportRef = firestore.collection("finances").doc();

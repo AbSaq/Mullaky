@@ -95,14 +95,14 @@ function UnifiedMasterDashboard() {
       {activeTab === "maintenance" && currentBuildingId && (
         <MaintenanceSection
           buildingId={currentBuildingId}
-          userRole={user.role}
+          userRole={data.role}
         />
       )}
       {activeTab === "finances" && currentBuildingId && (
-        <FinancesSection buildingId={currentBuildingId} userRole={user.role} />
+        <FinancesSection buildingId={currentBuildingId} userRole={data.role} />
       )}
       {activeTab === "alerts" && currentBuildingId && (
-        <AlertsSection buildingId={currentBuildingId} userRole={user.role} />
+        <AlertsSection buildingId={currentBuildingId} userRole={data.role} />
       )}
     </UnifiedDashboardShell>
   );

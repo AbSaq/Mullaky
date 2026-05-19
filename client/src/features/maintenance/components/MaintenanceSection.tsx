@@ -4,9 +4,13 @@ import {
   Wrench,
   Plus,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Clock,
   Play,
+  Lock,
+  Globe,
+  Trash2,
 } from "lucide-react";
 import {
   buildingMaintenanceQueryOptions,
@@ -24,12 +28,13 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
     title: "",
     description: "",
     category: "Plumbing",
+    visibility: "public",
   });
 
   const { data: tickets = [], isLoading } = useQuery(
     buildingMaintenanceQueryOptions(buildingId),
   );
-  const { createTicket, transitionTask, isCreating } =
+  const { createTicket, transitionTask, isCreating, deleteTicket } =
     useMaintenanceOperations(buildingId);
 
   const columns = [
@@ -56,7 +61,7 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     await createTicket(form);
-    setForm({ title: "", description: "", category: "Plumbing" });
+    setForm({ title: "", description: "", category: "Plumbing", visibility: "public" });
     setShowModal(false);
   };
 
@@ -112,8 +117,16 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
                 {colTickets.map((ticket) => (
                   <div
                     key={ticket.id}
-                    className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/60 rounded-xl p-4 shadow-sm space-y-3 hover:shadow-md transition"
+                    className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/60 rounded-xl p-4 shadow-sm space-y-3 hover:shadow-md transition relative group"
                   >
+                    {(userRole === "owner" || userRole === "admin") && (
+                      <button
+                        onClick={() => deleteTicket(ticket.id)}
+                        className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <div>
                       <span className="text-[10px] uppercase font-bold tracking-wider text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md">
                         {ticket.category}
@@ -131,24 +144,42 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
                         By: {ticket.userName}
                       </span>
 
-                      {/* Action trigger steps restricted to building owners / administrators */}
-                      {(userRole === "owner" || userRole === "admin") &&
-                        ticket.status !== "resolved" && (
-                          <button
-                            onClick={() =>
-                              transitionTask({
-                                requestId: ticket.id,
-                                status:
-                                  ticket.status === "pending"
-                                    ? "in-progress"
-                                    : "resolved",
-                              })
-                            }
-                            className="flex items-center gap-1 text-blue-500 hover:underline font-semibold cursor-pointer"
-                          >
-                            Advancing <ArrowRight className="w-3 h-3" />
-                          </button>
-                        )}
+                      {(userRole === "owner" || userRole === "admin") && (
+                        <div className="flex items-center gap-1.5">
+                          {ticket.status !== "pending" && (
+                            <button
+                              onClick={() =>
+                                transitionTask({
+                                  requestId: ticket.id,
+                                  status:
+                                    ticket.status === "resolved"
+                                      ? "in-progress"
+                                      : "pending",
+                                })
+                              }
+                              className="flex items-center gap-0.5 text-gray-400 hover:text-orange-500 font-semibold cursor-pointer transition"
+                            >
+                              <ArrowLeft className="w-3 h-3" /> Back
+                            </button>
+                          )}
+                          {ticket.status !== "resolved" && (
+                            <button
+                              onClick={() =>
+                                transitionTask({
+                                  requestId: ticket.id,
+                                  status:
+                                    ticket.status === "pending"
+                                      ? "in-progress"
+                                      : "resolved",
+                                })
+                              }
+                              className="flex items-center gap-0.5 text-blue-500 hover:text-blue-600 font-semibold cursor-pointer transition"
+                            >
+                              {ticket.status === "pending" ? "Start" : "Resolve"} <ArrowRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -201,6 +232,24 @@ export function MaintenanceSection({ buildingId, userRole }: Props) {
                 <option value="Janitorial">Janitorial</option>
               </select>
             </div>
+            {/* Visibility Toggle */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Visibility:</span>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, visibility: form.visibility === "public" ? "private" : "public" })}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                  form.visibility === "private"
+                    ? "bg-orange-50 border-orange-200 text-orange-600"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-600"
+                }`}
+              >
+                {form.visibility === "private"
+                  ? <><Lock className="w-3 h-3" /> Private — only you & owner</>
+                  : <><Globe className="w-3 h-3" /> Public — all residents</>}
+              </button>
+            </div>
+
             <div className="flex gap-2 justify-end">
               <button
                 type="button"

@@ -288,10 +288,10 @@ export function FinancesSection({ buildingId, userRole }: Readonly<Props>) {
       )}
 
       {/* ── HISTORICAL OWNER STATEMENT ANALYSIS LAYER ── */}
-      {isOwner && data.ownerReports?.length > 0 && (
+      {data.ownerReports?.length > 0 && (
         <div className="space-y-4">
           <h3 className="font-bold text-xs uppercase text-gray-400 tracking-wider">
-            Historical Expense Audit Matrix
+            Building Expense Reports
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {data.ownerReports.map((report) => (
@@ -299,12 +299,14 @@ export function FinancesSection({ buildingId, userRole }: Readonly<Props>) {
                 key={report.id}
                 className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4 relative group"
               >
-                <button
-                  onClick={() => deleteReport(report.id)}
-                  className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition duration-150 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => deleteReport(report.id)}
+                    className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition duration-150 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <div className="flex items-center justify-between">
                   <h4 className="font-black text-gray-900 dark:text-white text-base">
                     {report.month} Report

@@ -44,3 +44,15 @@ export function useAssignOwner() {
     },
   });
 }
+
+export function useRemoveOwner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ buildingId }: { buildingId: string }) => {
+      await api.post("/admin/buildings/remove-owner", { buildingId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboardOverview"] });
+    },
+  });
+}

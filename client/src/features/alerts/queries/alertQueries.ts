@@ -32,6 +32,7 @@ export function useAlertOperations(buildingId: string) {
       title: string;
       content: string;
       type: string;
+      visibility: string;
     }) => {
       await api.post(`/buildings/${buildingId}/alerts`, body);
     },
@@ -42,6 +43,19 @@ export function useAlertOperations(buildingId: string) {
       queryClient.invalidateQueries({
         queryKey: ["dashboardOverview", buildingId],
       });
+    },
+  });
+}
+
+export function useDeleteAlert(buildingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (alertId: string) => {
+      await api.delete(`/buildings/${buildingId}/alerts/${alertId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buildingAlerts", buildingId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardOverview", buildingId] });
     },
   });
 }

@@ -32,6 +32,7 @@ export function useMaintenanceOperations(buildingId: string) {
       title: string;
       description: string;
       category: string;
+      visibility: string;
     }) => {
       await api.post(`/buildings/${buildingId}/maintenance`, body);
     },
@@ -65,10 +66,21 @@ export function useMaintenanceOperations(buildingId: string) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await api.delete(`/buildings/${buildingId}/maintenance/${requestId}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["buildingMaintenance", buildingId] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboardOverview", buildingId] });
+    },
+  });
+
   return {
     createTicket: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
     transitionTask: transitionMutation.mutate,
     isTransitioning: transitionMutation.isPending,
+    deleteTicket: deleteMutation.mutate,
   };
 }

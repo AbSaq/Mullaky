@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Building2 } from "lucide-react";
+import { Search, Building2, X } from "lucide-react";
 import {
   adminUsersQueryOptions,
   useAssignOwner,
+  useRemoveOwner,
 } from "../queries/adminQueries";
 
 interface AssignOwnersProps {
@@ -15,7 +16,10 @@ export function AssignOwnersSection({ buildingsData }: AssignOwnersProps) {
   const [ownerSearch, setOwnerSearch] = useState<Record<string, string>>({});
 
   const { data: users = [] } = useQuery(adminUsersQueryOptions());
-  const { mutate: assignOwner, isPending } = useAssignOwner();
+  const { mutate: assignOwner, isPending: isAssigning } = useAssignOwner();
+  const { mutate: removeOwner, isPending: isRemoving } = useRemoveOwner();
+
+  const isPending = isAssigning || isRemoving;
 
   const filteredBuildings = buildingsData.filter(
     (b) =>
@@ -42,11 +46,9 @@ export function AssignOwnersSection({ buildingsData }: AssignOwnersProps) {
           const filteredOwners = users.filter(
             (o) =>
               o.role === "owner" &&
-              (o.fullName
-                ?.toLowerCase()
-                .includes(currentSearch.toLowerCase()) ||
-                o.email?.toLowerCase().includes(currentSearch.toLowerCase())),
+              o.email?.toLowerCase().includes(currentSearch.toLowerCase()),
           );
+          const currentOwner = users.find((u) => u.id === b.ownerId);
 
           return (
             <div
@@ -72,24 +74,29 @@ export function AssignOwnersSection({ buildingsData }: AssignOwnersProps) {
               </div>
 
               <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-500">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-gray-500 shrink-0">
                     {b.ownerId ? "Current Owner" : "Assign Owner"}
                   </p>
-                  {b.ownerId && (
-                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md truncate max-w-[150px]">
-                      {users.find((u) => u.id === b.ownerId)?.fullName ||
-                        "Assigned"}
-                    </span>
+                  {b.ownerId && currentOwner && (
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md truncate">
+                        {currentOwner.email || currentOwner.fullName}
+                      </span>
+                      <button
+                        disabled={isPending}
+                        onClick={() => removeOwner({ buildingId: b.id })}
+                        title="Remove owner"
+                        className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 <input
-                  type="text"
-                  placeholder={
-                    b.ownerId
-                      ? "Change owner..."
-                      : "Search owner matching criteria..."
-                  }
+                  type="email"
+                  placeholder="Search by email..."
                   value={currentSearch}
                   onChange={(e) =>
                     setOwnerSearch((prev) => ({
@@ -102,21 +109,29 @@ export function AssignOwnersSection({ buildingsData }: AssignOwnersProps) {
 
                 {currentSearch && (
                   <div className="max-h-32 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl p-1 bg-gray-50/50 dark:bg-gray-900/50">
-                    {filteredOwners.map((o) => (
-                      <button
-                        key={o.id}
-                        disabled={isPending}
-                        onClick={() =>
-                          assignOwner({ buildingId: b.id, ownerId: o.id })
-                        }
-                        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-left text-xs text-gray-700 dark:text-gray-300"
-                      >
-                        <span className="truncate">{o.fullName}</span>
-                        <span className="text-emerald-500 font-medium shrink-0">
-                          Assign
-                        </span>
-                      </button>
-                    ))}
+                    {filteredOwners.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-2">No owners found</p>
+                    ) : (
+                      filteredOwners.map((o) => (
+                        <button
+                          key={o.id}
+                          disabled={isPending}
+                          onClick={() => {
+                            assignOwner({ buildingId: b.id, ownerId: o.id });
+                            setOwnerSearch((prev) => ({ ...prev, [b.id]: "" }));
+                          }}
+                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-left text-xs text-gray-700 dark:text-gray-300"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{o.email}</p>
+                            <p className="truncate text-gray-400">{o.fullName}</p>
+                          </div>
+                          <span className="text-emerald-500 font-medium shrink-0 ml-2">
+                            Assign
+                          </span>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

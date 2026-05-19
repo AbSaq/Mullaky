@@ -41,12 +41,12 @@ export const processLoginSync = async ({
     const data = await response.json();
 
     if (!response.ok || data.error) {
-      throw new Error("INVALID_CREDENTIALS");
+      throw new Error("Wrong email or password");
     }
 
     localId = data.localId;
   } catch (error) {
-    throw new Error("INVALID_CREDENTIALS");
+    throw new Error("Wrong email or password");
   }
 
   const firebaseUser = await auth.getUser(localId);
@@ -60,7 +60,7 @@ export const processLoginSync = async ({
 
   const docSnap = await userDocRef.get();
   if (!docSnap.exists) {
-    throw new Error("USER_RECORD_NOT_FOUND");
+    throw new Error("User not found");
   }
 
   const userData = docSnap.data();

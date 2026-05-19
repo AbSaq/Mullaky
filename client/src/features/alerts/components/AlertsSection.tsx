@@ -6,10 +6,14 @@ import {
   Info,
   Wrench,
   ShieldAlert,
+  Trash2,
+  Lock,
+  Globe,
 } from "lucide-react";
 import {
   buildingAlertsQueryOptions,
   useAlertOperations,
+  useDeleteAlert,
 } from "../queries/alertQueries";
 
 interface Props {
@@ -18,19 +22,21 @@ interface Props {
 }
 
 export function AlertsSection({ buildingId, userRole }: Props) {
+  const isAuthority = userRole === "owner" || userRole === "admin";
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: "", content: "", type: "info" });
+  const [form, setForm] = useState({ title: "", content: "", type: "info", visibility: "public" });
 
   const { data: alerts = [], isLoading } = useQuery(
     buildingAlertsQueryOptions(buildingId),
   );
   const { mutate: broadcastAlert, isPending } = useAlertOperations(buildingId);
+  const { mutate: deleteAlert } = useDeleteAlert(buildingId);
 
   const handleBroadcast = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.content) return;
     broadcastAlert(form);
-    setForm({ title: "", content: "", type: "info" });
+    setForm({ title: "", content: "", type: "info", visibility: "public" });
     setShowForm(false);
   };
 
@@ -71,18 +77,16 @@ export function AlertsSection({ buildingId, userRole }: Props) {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* AUTHORITY BROADCAST FORM TOGGLE BUTTON */}
-      {(userRole === "owner" || userRole === "admin") && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 transition text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm cursor-pointer"
-          >
-            <Megaphone className="w-4 h-4" />{" "}
-            {showForm ? "Hide Console" : "New Broadcast Announcement"}
-          </button>
-        </div>
-      )}
+      {/* BROADCAST / INFO FORM TOGGLE */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 transition text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm cursor-pointer"
+        >
+          <Megaphone className="w-4 h-4" />
+          {showForm ? "Hide" : isAuthority ? "New Broadcast" : "Submit Info Notice"}
+        </button>
+      </div>
 
       {/* DISPATCH CONTROL PANEL */}
       {showForm && (
@@ -97,21 +101,27 @@ export function AlertsSection({ buildingId, userRole }: Props) {
             <input
               type="text"
               required
-              placeholder="Announcement Title..."
+              placeholder="Title..."
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="md:col-span-3 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 capitalize"
-            >
-              <option value="info">Info Notice</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="warning">Warning</option>
-              <option value="emergency">Emergency</option>
-            </select>
+            {isAuthority ? (
+              <select
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="info">Info Notice</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="warning">Warning</option>
+                <option value="emergency">Emergency</option>
+              </select>
+            ) : (
+              <div className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-400">
+                Info Notice
+              </div>
+            )}
           </div>
           <textarea
             required
@@ -121,13 +131,26 @@ export function AlertsSection({ buildingId, userRole }: Props) {
             onChange={(e) => setForm({ ...form, content: e.target.value })}
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
           />
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, visibility: form.visibility === "public" ? "private" : "public" })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                form.visibility === "private"
+                  ? "bg-orange-50 border-orange-200 text-orange-600"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-600"
+              }`}
+            >
+              {form.visibility === "private"
+                ? <><Lock className="w-3 h-3" /> Private — only you & owner</>
+                : <><Globe className="w-3 h-3" /> Public — all residents</>}
+            </button>
             <button
               type="submit"
               disabled={isPending}
               className="px-5 py-2 bg-blue-500 text-white font-semibold text-sm rounded-xl cursor-pointer hover:bg-blue-600 transition"
             >
-              {isPending ? "Emitting..." : "Broadcast Notice"}
+              {isPending ? "Sending..." : isAuthority ? "Broadcast Notice" : "Submit Notice"}
             </button>
           </div>
         </form>
@@ -152,6 +175,14 @@ export function AlertsSection({ buildingId, userRole }: Props) {
                 >
                   <style.icon className="w-5 h-5" />
                 </div>
+                {(userRole === "owner" || userRole === "admin") && (
+                  <button
+                    onClick={() => deleteAlert(alert.id)}
+                    className="shrink-0 p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-white/60 dark:hover:bg-gray-900/60 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-x-2">
                     <h4 className="font-bold text-gray-900 dark:text-white text-base leading-tight truncate capitalize">

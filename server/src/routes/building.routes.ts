@@ -15,6 +15,7 @@ import {
   getBuildingMaintenance,
   createMaintenanceRequest,
   updateMaintenanceStatus,
+  deleteMaintenanceRequest,
 } from "../controllers/maintenance.controller.js";
 
 import {
@@ -27,6 +28,7 @@ import {
 import {
   getBuildingAlerts,
   broadcastBuildingAlert,
+  deleteBuildingAlert,
 } from "../controllers/alert.controller.js";
 
 const router = Router();
@@ -50,12 +52,18 @@ router.patch(
   requireAuth,
   updateMaintenanceStatus,
 );
+router.delete(
+  "/:buildingId/maintenance/:requestId",
+  requireAuth,
+  deleteMaintenanceRequest,
+);
 
 router.get("/:buildingId/finances", requireAuth, getBuildingFinanceLedger);
 router.post("/:buildingId/finances/pay", requireAuth, recordRentPayment);
 
 router.get("/:buildingId/alerts", requireAuth, getBuildingAlerts);
 router.post("/:buildingId/alerts", requireAuth, broadcastBuildingAlert);
+router.delete("/:buildingId/alerts/:alertId", requireAuth, deleteBuildingAlert);
 
 router.post(
   "/:buildingId/finances/report",

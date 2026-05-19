@@ -91,6 +91,9 @@ export const getDashboardOverview = async (
       return;
     }
 
+    // Use membership role as the source of truth for building context
+    const membershipRole = (membershipCheck.docs[0]?.data()?.role as string) || role;
+
     // ── OPERATIONAL CONSOLIDATED PIPELINE QUERY MAP (OWNER & USER) ──
     const [
       buildingDoc,
@@ -142,7 +145,7 @@ export const getDashboardOverview = async (
     );
 
     res.status(200).json({
-      role,
+      role: membershipRole,
       building: { id: buildingDoc.id, ...buildingDoc.data() },
       stats: {
         residents: residents.length,
@@ -152,10 +155,10 @@ export const getDashboardOverview = async (
         ).length,
         finances: finances[0]?.totalCollected || 0,
       },
-      residents: role === "owner" ? residents : undefined, // Encapsulate data visibility matrices cleanly
+      residents: membershipRole === "owner" ? residents : undefined,
       recentAlerts: allAlerts.slice(0, 5),
       maintenanceRequests:
-        role === "user"
+        membershipRole === "user"
           ? maintenance.filter(
               (m: any) => m.userId === uid || m.visibility === "public",
             )

@@ -14,10 +14,17 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: loginSyncRequest,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       localStorage.setItem("token", data.token);
 
-      await queryClient.invalidateQueries({ queryKey: ["userStatus"] });
+      queryClient.setQueryData(["userStatus"], {
+        isAuthenticated: true,
+        isVerified: true,
+        role: data.user.role,
+        targetRoute: data.targetRoute,
+        user: { email: data.user.email, fullName: data.user.fullName },
+      });
+
       void navigate({ to: data.targetRoute });
     },
     onError: (error: any) => {
