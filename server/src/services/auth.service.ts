@@ -107,12 +107,8 @@ export const processRegisterSync = async ({
     createdAt: new Date().toISOString(),
   });
 
-  // 3. Auto-generate the link so developers can see it in terminal
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-  const link = await auth.generateEmailVerificationLink(email, {
-    url: `${clientUrl}/login`,
-  });
-  console.log(`✉️ Verification link generated for new user ${email}: ${link}`);
+  // 3. Send verification email via Firebase REST API
+  await sendVerificationEmail(newFirebaseUser.uid);
 
   return { success: true };
 };
@@ -130,15 +126,41 @@ export const checkEmailVerificationStatus = async (email: string) => {
 };
 
 export const triggerVerificationEmailResend = async (email: string) => {
-  const actionCodeSettings = {
-    url: `${process.env.CLIENT_URL || "http://localhost:5173"}/login`,
-  };
-  const link = await auth.generateEmailVerificationLink(
-    email,
-    actionCodeSettings,
+  const firebaseUser = await auth.getUserByEmail(email);
+  await sendVerificationEmail(firebaseUser.uid);
+};
+
+const sendVerificationEmail = async (uid: string): Promise<void> => {
+  const customToken = await auth.createCustomToken(uid);
+
+  const signInRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_WEB_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+    },
   );
-  console.log(`✉️ Verification link generated for ${email}: ${link}`);
-  return link;
+  const signInData = await signInRes.json();
+  if (!signInRes.ok || signInData.error) {
+    throw new Error("Failed to sign in with custom token");
+  }
+
+  const sendRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_WEB_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestType: "VERIFY_EMAIL",
+        idToken: signInData.idToken,
+      }),
+    },
+  );
+  const sendData = await sendRes.json();
+  if (!sendRes.ok || sendData.error) {
+    throw new Error("Failed to send verification email");
+  }
 };
 
 export const getUserProfileStatus = async (uid: string) => {
